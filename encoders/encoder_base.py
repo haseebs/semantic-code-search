@@ -4,6 +4,7 @@ from collections import Counter
 
 from utils.bpevocabulary import BpeVocabulary
 
+
 class EncoderBase(nn.Module):
     def __init__(self, hyperparameters: Dict[str, Any]):
         super().__init__()
@@ -15,11 +16,14 @@ class EncoderBase(nn.Module):
         self.token_counter.update(sample_tokens)
 
     def build_vocabulary(self) -> None:
-        if self.hypers['use_bpe']:
-            self.vocabulary = BpeVocabulary(vocab_size=self.hypers['vocab_size'],
-                                            pct_bpe=self.hypers['vocab_pct_bpe'])
+        if self.hypers["use_bpe"]:
+            self.vocabulary = BpeVocabulary(
+                vocab_size=self.hypers["vocab_size"], pct_bpe=self.hypers["vocab_pct_bpe"],
+            )
             self.vocabulary.fit(self.token_counter)
         else:
-            self.vocabulary = Vocabulary.create_vocabulary(tokens=self.token_counter,
-                                                           max_size=self.hypers['vocab_size'],
-                                                           count_threshold=self.hypers['vocab_count_threshold'])
+            self.vocabulary = Vocabulary.create_vocabulary(
+                tokens=self.token_counter,
+                max_size=self.hypers["vocab_size"],
+                count_threshold=self.hypers["vocab_count_threshold"],
+            )

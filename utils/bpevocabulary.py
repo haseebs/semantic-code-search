@@ -15,10 +15,10 @@ except ImportError:
     pass
 
 
-DEFAULT_EOW = '__eow'
-DEFAULT_SOW = '__sow'
-DEFAULT_UNK = '__unk'
-DEFAULT_PAD = '__pad'
+DEFAULT_EOW = "__eow"
+DEFAULT_SOW = "__sow"
+DEFAULT_UNK = "__unk"
+DEFAULT_PAD = "__pad"
 
 
 class BpeVocabulary(typing.Sized):
@@ -26,11 +26,21 @@ class BpeVocabulary(typing.Sized):
     Encodes white-space separated text using byte-pair encoding.  See https://arxiv.org/abs/1508.07909 for details.
     """
 
-    def __init__(self, vocab_size: int=8192, pct_bpe: float=0.2,
-                 ngram_min: int=2, ngram_max: int=8, required_tokens: Optional[Iterable[str]]=None, strict=True,
-                 EOW=DEFAULT_EOW, SOW=DEFAULT_SOW, UNK=DEFAULT_UNK, PAD=DEFAULT_PAD):
+    def __init__(
+        self,
+        vocab_size: int = 8192,
+        pct_bpe: float = 0.2,
+        ngram_min: int = 2,
+        ngram_max: int = 8,
+        required_tokens: Optional[Iterable[str]] = None,
+        strict=True,
+        EOW=DEFAULT_EOW,
+        SOW=DEFAULT_SOW,
+        UNK=DEFAULT_UNK,
+        PAD=DEFAULT_PAD,
+    ):
         if vocab_size < 1:
-            raise ValueError('vocab size must be greater than 0.')
+            raise ValueError("vocab size must be greater than 0.")
 
         self.EOW = EOW
         self.SOW = SOW
@@ -41,7 +51,9 @@ class BpeVocabulary(typing.Sized):
         self.required_tokens = list(set(required_tokens or []).union({self.UNK, self.PAD}))
         self.vocab_size = vocab_size
         self.pct_bpe = pct_bpe
-        self.word_vocab_size = max([int(vocab_size * (1 - pct_bpe)), len(self.required_tokens or [])])
+        self.word_vocab_size = max(
+            [int(vocab_size * (1 - pct_bpe)), len(self.required_tokens or [])]
+        )
         self.bpe_vocab_size = vocab_size - self.word_vocab_size
         self.word_vocab = {}  # type: Dict[str, int]
         self.bpe_vocab = {}  # type: Dict[str, int]
@@ -60,8 +72,8 @@ class BpeVocabulary(typing.Sized):
         """
         for token, count in self.count_tokens(words).items():
             bp_counts = Counter()  # type: Counter
-            sub_tokens = token.split(' ')
-            joined_tokens = ''.join(sub_tokens)
+            sub_tokens = token.split(" ")
+            joined_tokens = "".join(sub_tokens)
             token_offsets = [0]
             length = 0
             for ngram in sub_tokens:
@@ -70,35 +82,42 @@ class BpeVocabulary(typing.Sized):
                 token_offsets += [length]
             for ngram_size in range(self.ngram_min, min(self.ngram_max, len(sub_tokens)) + 1):
                 for i in range(len(sub_tokens) - ngram_size + 1):
-                    bp_counts[joined_tokens[token_offsets[i]:token_offsets[i+ngram_size]]] += count
+                    bp_counts[
+                        joined_tokens[token_offsets[i] : token_offsets[i + ngram_size]]
+                    ] += count
 
             yield bp_counts
 
     def count_tokens(self, words: Iterable[str]) -> Dict[str, int]:
         """ Count tokens into a BPE vocab """
         token_counts = Counter(words)
-        return {' '.join(token): count for token, count in token_counts.items()}
+        return {" ".join(token): count for token, count in token_counts.items()}
 
     def learn_word_vocab(self, word_counts: typing.Counter[str]) -> Dict[str, int]:
         """ Build vocab from self.word_vocab_size most common tokens in provided sentences """
         for token in set(self.required_tokens or []):
-            word_counts[token] = int(2**31)
-        word_counts[self.PAD] = int(2**32)  # Make sure that PAD gets id=0
+            word_counts[token] = int(2 ** 31)
+        word_counts[self.PAD] = int(2 ** 32)  # Make sure that PAD gets id=0
         sorted_word_counts = sorted(word_counts.items(), key=lambda p: -p[1])
-        return {word: idx for idx, (word, count) in enumerate(sorted_word_counts[:self.word_vocab_size])}
+        return {
+            word: idx
+            for idx, (word, count) in enumerate(sorted_word_counts[: self.word_vocab_size])
+        }
 
     def learn_bpe_vocab(self, words: Iterable[str]) -> Dict[str, int]:
         """ Learns a vocab of byte pair encodings """
         vocab = Counter()  # type: typing.Counter
         for token in {self.SOW, self.EOW}:
-            vocab[token] = int(2**63)
+            vocab[token] = int(2 ** 63)
         for idx, byte_pair_count in enumerate(self.byte_pair_counts(words)):
             vocab.update(byte_pair_count)
             if (idx + 1) % 10000 == 0:
                 self.trim_vocab(10 * self.bpe_vocab_size, vocab)
 
-        sorted_bpe_counts = sorted(vocab.items(), key=lambda p: -p[1])[:self.bpe_vocab_size]
-        return {bp: idx + self.word_vocab_size for idx, (bp, count) in enumerate(sorted_bpe_counts)}
+        sorted_bpe_counts = sorted(vocab.items(), key=lambda p: -p[1])[: self.bpe_vocab_size]
+        return {
+            bp: idx + self.word_vocab_size for idx, (bp, count) in enumerate(sorted_bpe_counts)
+        }
 
     def fit(self, word_counts: typing.Counter[str]) -> None:
         """ Learn vocab from text. """
@@ -106,8 +125,9 @@ class BpeVocabulary(typing.Sized):
         # First, learn word vocab
         self.word_vocab = self.learn_word_vocab(word_counts)
 
-        remaining_words = Counter({word: count for word, count in word_counts.items()
-                           if word not in self.word_vocab})
+        remaining_words = Counter(
+            {word: count for word, count in word_counts.items() if word not in self.word_vocab}
+        )
         self.bpe_vocab = self.learn_bpe_vocab(remaining_words.elements())
 
         self.inverse_word_vocab = {idx: token for token, idx in self.word_vocab.items()}
@@ -155,7 +175,9 @@ class BpeVocabulary(typing.Sized):
 
         return tokens
 
-    def transform(self, sentences: Iterable[List[str]], reverse=False, fixed_length=None)-> Iterable[List[str]]:
+    def transform(
+        self, sentences: Iterable[List[str]], reverse=False, fixed_length=None
+    ) -> Iterable[List[str]]:
         """ Turns tokens into vocab idxs """
         direction = -1 if reverse else 1
         for sentence in sentences:
@@ -182,19 +204,19 @@ class BpeVocabulary(typing.Sized):
             words = []
 
             rebuilding_word = False
-            current_word = ''
+            current_word = ""
             for idx in row:
                 if self.inverse_bpe_vocab.get(idx) == self.SOW:
                     if rebuilding_word and self.strict:
-                        raise ValueError('Encountered second SOW token before EOW.')
+                        raise ValueError("Encountered second SOW token before EOW.")
                     rebuilding_word = True
 
                 elif self.inverse_bpe_vocab.get(idx) == self.EOW:
                     if not rebuilding_word and self.strict:
-                        raise ValueError('Encountered EOW without matching SOW.')
+                        raise ValueError("Encountered EOW without matching SOW.")
                     rebuilding_word = False
                     words.append(current_word)
-                    current_word = ''
+                    current_word = ""
 
                 elif rebuilding_word and (idx in self.inverse_bpe_vocab):
                     current_word += self.inverse_bpe_vocab[idx]
@@ -207,11 +229,15 @@ class BpeVocabulary(typing.Sized):
 
                 elif idx in self.inverse_bpe_vocab:
                     if self.strict:
-                        raise ValueError("Found BPE index {} when not rebuilding word!".format(idx))
+                        raise ValueError(
+                            "Found BPE index {} when not rebuilding word!".format(idx)
+                        )
                     else:
                         words.append(self.inverse_bpe_vocab[idx])
 
                 else:
-                    raise ValueError("Got index {} that was not in word or BPE vocabs!".format(idx))
+                    raise ValueError(
+                        "Got index {} that was not in word or BPE vocabs!".format(idx)
+                    )
 
-            yield ' '.join(w for w in words if w != '')
+            yield " ".join(w for w in words if w != "")

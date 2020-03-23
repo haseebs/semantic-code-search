@@ -6,11 +6,12 @@ from dpu_utils.mlutils import Vocabulary
 from .bpevocabulary import BpeVocabulary
 
 
-def convert_and_pad_token_sequence(token_vocab: Union[Vocabulary, BpeVocabulary],
-                                   token_sequence: List[str],
-                                   output_tensor_size: int,
-                                   pad_from_left: bool = False) \
-        -> Tuple[np.ndarray, np.ndarray]:
+def convert_and_pad_token_sequence(
+    token_vocab: Union[Vocabulary, BpeVocabulary],
+    token_sequence: List[str],
+    output_tensor_size: int,
+    pad_from_left: bool = False,
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Tensorise token sequence with padding; returning a mask for used elements as well.
 
@@ -25,7 +26,9 @@ def convert_and_pad_token_sequence(token_vocab: Union[Vocabulary, BpeVocabulary]
         that is 1.0 for those token indices that are actually used.
     """
     if isinstance(token_vocab, BpeVocabulary):
-        token_ids = np.array(list(token_vocab.transform([token_sequence], fixed_length=output_tensor_size))[0])
+        token_ids = np.array(
+            list(token_vocab.transform([token_sequence], fixed_length=output_tensor_size))[0]
+        )
         token_mask = np.array([1 if token_ids[i] > 0 else 0 for i in range(len(token_ids))])
         return token_ids, token_mask
 
@@ -47,4 +50,3 @@ def convert_and_pad_token_sequence(token_vocab: Union[Vocabulary, BpeVocabulary]
         token_mask[i] = True
 
     return token_ids, token_mask
-
