@@ -1,3 +1,4 @@
+import wandb
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
@@ -21,7 +22,6 @@ class ModelBase(pl.LightningModule):
         self.test_dataset = test_dataset
 
         self.init_encoders()
-
 
     def forward(self, batch):
         code_embs = self.code_encoder(seq_tokens=batch['encoded_code'],
@@ -66,8 +66,13 @@ class ModelBase(pl.LightningModule):
     def test_epoch_end(self, out):
         avg_mrr = torch.stack([x['mrr'] for x in out]).mean()
         log_dict = {'test_mrr': avg_mrr}
-        print(log_dict)
-        return {'test_mrr': avg_mrr, 'log': log_dict}
+
+        wandb_path = f'haseebs/{self.logger.experiment.project}/{self.logger.experiment.id}'
+        run = wandb.Api().run(wandb_path)
+        run.summary['test_mrr'] = avg_mrr
+        run.summary.update()
+
+        return {'test_mrr': avg_mrr, 'progress_bar': log_dict, 'log': log_dict}
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.hypers['learning_rate'])

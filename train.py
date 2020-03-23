@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append('/home/haseebs/workspace/CSN/semantic_code_search')
 
+import wandb
 from pytorch_lightning import loggers
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
@@ -31,6 +32,8 @@ def run():
 
     keep_keys = set(['language', 'docstring_tokens', 'code_tokens'])
 
+    logger = loggers.WandbLogger(experiment=wandb.init(project='semantic-code-search'))
+
     train_dataset = CSNDataset(hypers=hypers,
                                keep_keys=keep_keys,
                                data_split='train')
@@ -47,7 +50,6 @@ def run():
                       valid_dataset,
                       test_dataset)
 
-    logger = loggers.WandbLogger(project='semantic-code-search')
 
     early_stop_callback = EarlyStopping(monitor='val_mrr',
                                         min_delta=0.00,
@@ -55,7 +57,7 @@ def run():
                                         verbose=True,
                                         mode='max')
 
-    checkpoint_callback = ModelCheckpoint(filepath='lightning_logs/',#'{epoch:02d}-{val_mrr:.2f}.hdf5',
+    checkpoint_callback = ModelCheckpoint(filepath=wandb.run.dir + '/{epoch:02d}_best_checkpoint',
                                           monitor='val_mrr',
                                           verbose=True,
                                           mode='max')
