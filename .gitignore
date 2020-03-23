@@ -1,3 +1,6 @@
+lightning_logs
+data_dirs_bk.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
