@@ -1,10 +1,13 @@
-import sys
 import os
+import sys
 sys.path.append('/home/haseebs/workspace/CSN/semantic_code_search')
-from models.model_base import ModelBase
-from dataset import CSNDataset
+
+from pytorch_lightning import loggers
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+
+from dataset import CSNDataset
+from models.model_base import ModelBase
 
 
 def run():
@@ -44,6 +47,8 @@ def run():
                       valid_dataset,
                       test_dataset)
 
+    logger = loggers.WandbLogger(project='semantic-code-search')
+
     early_stop_callback = EarlyStopping(monitor='val_mrr',
                                         min_delta=0.00,
                                         patience=hypers['patience'],
@@ -59,7 +64,8 @@ def run():
                       gradient_clip_val=hypers['gradient_clip'],
                       early_stop_callback=early_stop_callback,
                       checkpoint_callback=checkpoint_callback,
-                      progress_bar_refresh_rate=50,
+                      progress_bar_refresh_rate=10,
+                      logger=logger,
                       gpus=1)
 
     trainer.fit(model)
