@@ -18,7 +18,8 @@ class EncoderBase(nn.Module):
     def build_vocabulary(self) -> None:
         if self.hypers["use_bpe"]:
             self.vocabulary = BpeVocabulary(
-                vocab_size=self.hypers["vocab_size"], pct_bpe=self.hypers["vocab_pct_bpe"],
+                vocab_size=self.hypers["vocab_size"],
+                pct_bpe=self.hypers["vocab_pct_bpe"],
             )
             self.vocabulary.fit(self.token_counter)
         else:

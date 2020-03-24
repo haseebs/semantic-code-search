@@ -48,7 +48,9 @@ class BpeVocabulary(typing.Sized):
         self.sow_len = len(SOW)
         self.UNK = UNK
         self.PAD = PAD
-        self.required_tokens = list(set(required_tokens or []).union({self.UNK, self.PAD}))
+        self.required_tokens = list(
+            set(required_tokens or []).union({self.UNK, self.PAD})
+        )
         self.vocab_size = vocab_size
         self.pct_bpe = pct_bpe
         self.word_vocab_size = max(
@@ -80,10 +82,14 @@ class BpeVocabulary(typing.Sized):
                 bp_counts[ngram] += count
                 length += len(ngram)
                 token_offsets += [length]
-            for ngram_size in range(self.ngram_min, min(self.ngram_max, len(sub_tokens)) + 1):
+            for ngram_size in range(
+                self.ngram_min, min(self.ngram_max, len(sub_tokens)) + 1
+            ):
                 for i in range(len(sub_tokens) - ngram_size + 1):
                     bp_counts[
-                        joined_tokens[token_offsets[i] : token_offsets[i + ngram_size]]
+                        joined_tokens[
+                            token_offsets[i] : token_offsets[i + ngram_size]
+                        ]
                     ] += count
 
             yield bp_counts
@@ -101,7 +107,9 @@ class BpeVocabulary(typing.Sized):
         sorted_word_counts = sorted(word_counts.items(), key=lambda p: -p[1])
         return {
             word: idx
-            for idx, (word, count) in enumerate(sorted_word_counts[: self.word_vocab_size])
+            for idx, (word, count) in enumerate(
+                sorted_word_counts[: self.word_vocab_size]
+            )
         }
 
     def learn_bpe_vocab(self, words: Iterable[str]) -> Dict[str, int]:
@@ -114,9 +122,12 @@ class BpeVocabulary(typing.Sized):
             if (idx + 1) % 10000 == 0:
                 self.trim_vocab(10 * self.bpe_vocab_size, vocab)
 
-        sorted_bpe_counts = sorted(vocab.items(), key=lambda p: -p[1])[: self.bpe_vocab_size]
+        sorted_bpe_counts = sorted(vocab.items(), key=lambda p: -p[1])[
+            : self.bpe_vocab_size
+        ]
         return {
-            bp: idx + self.word_vocab_size for idx, (bp, count) in enumerate(sorted_bpe_counts)
+            bp: idx + self.word_vocab_size
+            for idx, (bp, count) in enumerate(sorted_bpe_counts)
         }
 
     def fit(self, word_counts: typing.Counter[str]) -> None:
@@ -126,12 +137,20 @@ class BpeVocabulary(typing.Sized):
         self.word_vocab = self.learn_word_vocab(word_counts)
 
         remaining_words = Counter(
-            {word: count for word, count in word_counts.items() if word not in self.word_vocab}
+            {
+                word: count
+                for word, count in word_counts.items()
+                if word not in self.word_vocab
+            }
         )
         self.bpe_vocab = self.learn_bpe_vocab(remaining_words.elements())
 
-        self.inverse_word_vocab = {idx: token for token, idx in self.word_vocab.items()}
-        self.inverse_bpe_vocab = {idx: token for token, idx in self.bpe_vocab.items()}
+        self.inverse_word_vocab = {
+            idx: token for token, idx in self.word_vocab.items()
+        }
+        self.inverse_bpe_vocab = {
+            idx: token for token, idx in self.bpe_vocab.items()
+        }
 
     @staticmethod
     def trim_vocab(n: int, vocab: Dict[str, int]) -> None:
@@ -230,14 +249,18 @@ class BpeVocabulary(typing.Sized):
                 elif idx in self.inverse_bpe_vocab:
                     if self.strict:
                         raise ValueError(
-                            "Found BPE index {} when not rebuilding word!".format(idx)
+                            "Found BPE index {} when not rebuilding word!".format(
+                                idx
+                            )
                         )
                     else:
                         words.append(self.inverse_bpe_vocab[idx])
 
                 else:
                     raise ValueError(
-                        "Got index {} that was not in word or BPE vocabs!".format(idx)
+                        "Got index {} that was not in word or BPE vocabs!".format(
+                            idx
+                        )
                     )
 
             yield " ".join(w for w in words if w != "")

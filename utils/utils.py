@@ -27,9 +27,15 @@ def convert_and_pad_token_sequence(
     """
     if isinstance(token_vocab, BpeVocabulary):
         token_ids = np.array(
-            list(token_vocab.transform([token_sequence], fixed_length=output_tensor_size))[0]
+            list(
+                token_vocab.transform(
+                    [token_sequence], fixed_length=output_tensor_size
+                )
+            )[0]
         )
-        token_mask = np.array([1 if token_ids[i] > 0 else 0 for i in range(len(token_ids))])
+        token_mask = np.array(
+            [1 if token_ids[i] > 0 else 0 for i in range(len(token_ids))]
+        )
         return token_ids, token_mask
 
     if pad_from_left:

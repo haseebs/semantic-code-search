@@ -34,13 +34,23 @@ def run():
     }
 
     keep_keys = set(["language", "docstring_tokens", "code_tokens"])
-    keep_keys_test = set(["language", "docstring_tokens", "code_tokens", "docstring", "code"])
+    keep_keys_test = set(
+        ["language", "docstring_tokens", "code_tokens", "docstring", "code"]
+    )
 
-    logger = loggers.WandbLogger(experiment=wandb.init(project="semantic-code-search"))
+    logger = loggers.WandbLogger(
+        experiment=wandb.init(project="semantic-code-search")
+    )
 
-    train_dataset = CSNDataset(hypers=hypers, keep_keys=keep_keys, data_split="train")
-    valid_dataset = CSNDataset(hypers=hypers, keep_keys=keep_keys, data_split="valid")
-    test_dataset = CSNDataset(hypers=hypers, keep_keys=keep_keys_test, data_split="test")
+    train_dataset = CSNDataset(
+        hypers=hypers, keep_keys=keep_keys, data_split="train"
+    )
+    valid_dataset = CSNDataset(
+        hypers=hypers, keep_keys=keep_keys, data_split="valid"
+    )
+    test_dataset = CSNDataset(
+        hypers=hypers, keep_keys=keep_keys_test, data_split="test"
+    )
 
     model = ModelBase(hypers, train_dataset, valid_dataset, test_dataset)
 
@@ -66,7 +76,7 @@ def run():
         checkpoint_callback=checkpoint_callback,
         progress_bar_refresh_rate=10,
         logger=logger,
-        train_percent_check=0.1,
+        # train_percent_check=0.1,
         gpus=1,
     )
 

@@ -10,7 +10,9 @@ from utils.utils import convert_and_pad_token_sequence
 
 
 class CSNDataset(Dataset):
-    def __init__(self, hypers: Dict[str, Any], keep_keys: set(), data_split: str = "train"):
+    def __init__(
+        self, hypers: Dict[str, Any], keep_keys: set(), data_split: str = "train"
+    ):
         self.hypers = hypers
         self.keep_keys = keep_keys
         self.original_data = []
@@ -30,7 +32,9 @@ class CSNDataset(Dataset):
 
     def read_data(self, data_split: str = "train") -> None:
         data_dirs = open("data_dirs.txt", "rt", encoding="utf-8")
-        paths = [os.path.join(path, data_split) for path in data_dirs.read().splitlines()]
+        paths = [
+            os.path.join(path, data_split) for path in data_dirs.read().splitlines()
+        ]
         for path in paths:
             data_files = sorted(os.listdir(path))
             for data_file in data_files:
@@ -39,7 +43,9 @@ class CSNDataset(Dataset):
                         self.read_jsonl(path=os.path.join(path, data_file))
                     )
 
-    def encode_data(self, query_encoder: EncoderBase, code_encoder: EncoderBase) -> None:
+    def encode_data(
+        self, query_encoder: EncoderBase, code_encoder: EncoderBase
+    ) -> None:
         # TODO may need to move to encoder class to handle encoders that come with their own tokenizers
         for idx, sample in enumerate(self.original_data):
             enc_query, enc_query_mask = convert_and_pad_token_sequence(

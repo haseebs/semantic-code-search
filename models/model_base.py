@@ -58,34 +58,31 @@ class ModelBase(pl.LightningModule):
     def validation_epoch_end(self, out):
         avg_loss = torch.stack([x["loss"] for x in out]).mean()
         # TODO mean of means != total mean
-        avg_mrr = torch.stack( [x["mrr"] for x in out]).mean()
+        avg_mrr = torch.stack([x["mrr"] for x in out]).mean()
         log_dict = {"val_loss": avg_loss, "val_mrr": avg_mrr}
 
         return {"val_loss": avg_loss, "progress_bar": log_dict, "log": log_dict}
 
     def test_step(self, batch, batch_idx):
         code_embs, query_embs = self.forward(batch)
-        _, mrr, similarity_scores, ranks = self.get_eval_metrics(code_embs, query_embs)
+        _, mrr, similarity_scores, ranks = self.get_eval_metrics(
+            code_embs, query_embs
+        )
         self.make_examples(batch, similarity_scores, ranks)
         return {"mrr": mrr}
 
     def test_epoch_end(self, out):
-
         avg_mrr = torch.stack([x["mrr"] for x in out]).mean()
         log_dict = {"test_mrr": avg_mrr}
-
-        #run = self.get_wandb_run()
-        #run.summary["test_mrr"] = avg_mrr.item()
-        #run.summary.update()
-
         return {"test_mrr": avg_mrr, "progress_bar": log_dict, "log": log_dict}
 
     def get_eval_metrics(self, code_embs: torch.tensor, query_embs: torch.tensor):
         query_norm = F.normalize(query_embs, dim=-1) + 1e-10
         code_norm = F.normalize(code_embs, dim=-1) + 1e-10
         similarity_scores = code_norm @ query_norm.T
-        # similarity_scores = query_embs/query_norm @ (code_embs/code_norm).T
-        neg_matrix = torch.diag(torch.tensor([float("-inf")] * similarity_scores.shape[0]))
+        neg_matrix = torch.diag(
+            torch.tensor([float("-inf")] * similarity_scores.shape[0])
+        )
         per_sample_loss = torch.max(
             torch.tensor(0.0).cuda(),
             self.hypers["margin"]
@@ -102,43 +99,61 @@ class ModelBase(pl.LightningModule):
 
     def make_examples(self, batch, similarity_scores, ranks):
         max_examples = 50
-        language = self.test_dataset.original_data[0]['language']
+        language = self.test_dataset.original_data[0]["language"]
         predictions = torch.argmax(similarity_scores, dim=1)
-        r = random.sample(range(self.hypers['batch_size']), max_examples)
+        r = random.sample(range(self.hypers["batch_size"]), max_examples)
 
         selected_ranks = ranks[r]
         selected_predictions = predictions[r]
-        predicted_original_idx = batch['original_data_idx'][r]
-        predicted_original_data = [self.test_dataset.original_data[i]['code'] for i in predicted_original_idx]
+        predicted_original_idx = batch["original_data_idx"][r]
+        predicted_original_data = [
+            self.test_dataset.original_data[i]["code"]
+            for i in predicted_original_idx
+        ]
 
-        query_original_idx = batch['original_data_idx'][r]
-        query_original_data = [self.test_dataset.original_data[i]['docstring'] for i in query_original_idx]
+        query_original_idx = batch["original_data_idx"][r]
+        query_original_data = [
+            self.test_dataset.original_data[i]["docstring"]
+            for i in query_original_idx
+        ]
 
         examples_table = []
         examples_table_columns = ["Rank", "Language", "Query", "Code"]
 
         for idx in range(max_examples):
-            markdown_code = "```%s\n" % language + predicted_original_data[idx].strip("\n") + "\n```"
-            examples_table.append([selected_ranks[idx].item(), language, query_original_data[idx], markdown_code])
+            markdown_code = (
+                "```%s\n" % language
+                + predicted_original_data[idx].strip("\n")
+                + "\n```"
+            )
+            examples_table.append(
+                [
+                    selected_ranks[idx].item(),
+                    language,
+                    query_original_data[idx],
+                    markdown_code,
+                ]
+            )
 
-        self.logger.experiment.log({'Test Examples': wandb.Table(columns=examples_table_columns, rows=examples_table)})
-
-    def get_wandb_run(self):
-        try:
-            wandb_path = f"haseebs/{self.logger.experiment.project}/{self.logger.experiment.id}"
-            run = wandb.Api().run(wandb_path)
-        except Exception:
-            print(f'Wandb path: {wandb_path} not found. Maybe wandb syncing was turned off during training')
-            run = self.logger.experiment
-        return run
+        self.logger.experiment.log(
+            {
+                "Test Examples": wandb.Table(
+                    columns=examples_table_columns, rows=examples_table
+                )
+            }
+        )
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.hypers["learning_rate"])
 
     def init_encoders(self):
         encoder_factory = EncoderFactory(self.hypers)
-        self.code_encoder = encoder_factory.get_encoder(self.hypers["code_encoder_type"])
-        self.query_encoder = encoder_factory.get_encoder(self.hypers["query_encoder_type"])
+        self.code_encoder = encoder_factory.get_encoder(
+            self.hypers["code_encoder_type"]
+        )
+        self.query_encoder = encoder_factory.get_encoder(
+            self.hypers["query_encoder_type"]
+        )
 
         # TODO cleanup this mess
         print("Building vocabulary...")
