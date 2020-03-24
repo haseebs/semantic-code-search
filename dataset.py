@@ -41,7 +41,7 @@ class CSNDataset(Dataset):
 
     def encode_data(self, query_encoder: EncoderBase, code_encoder: EncoderBase) -> None:
         # TODO may need to move to encoder class to handle encoders that come with their own tokenizers
-        for sample in self.original_data:
+        for idx, sample in enumerate(self.original_data):
             enc_query, enc_query_mask = convert_and_pad_token_sequence(
                 query_encoder.vocabulary,
                 sample["docstring_tokens"],
@@ -59,6 +59,7 @@ class CSNDataset(Dataset):
 
             self.encoded_data.append(
                 {
+                    "original_data_idx": idx,
                     "encoded_query": enc_query,
                     "encoded_query_mask": enc_query_mask,
                     "encoded_query_length": enc_query_length,
