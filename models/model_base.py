@@ -58,10 +58,8 @@ class ModelBase(pl.LightningModule):
 
     def validation_epoch_end(self, out):
         avg_loss = torch.stack([x["loss"] for x in out]).mean()
-        avg_mrr = torch.stack(
-            [x["mrr"] for x in out]
-        ).mean()  # TODO mean of means != total mean
-
+        # TODO mean of means != total mean
+        avg_mrr = torch.stack( [x["mrr"] for x in out]).mean()
         log_dict = {"val_loss": avg_loss, "val_mrr": avg_mrr}
 
         return {"val_loss": avg_loss, "progress_bar": log_dict, "log": log_dict}
@@ -119,9 +117,8 @@ class ModelBase(pl.LightningModule):
         return total_loss, mrr
 
     def train_dataloader(self):
-        if (
-            len(self.train_dataset.encoded_data) == 0
-        ):  # TODO Why is this being called more than once
+        # TODO Why is this being called more than once
+        if len(self.train_dataset.encoded_data) == 0:
             self.train_dataset.encode_data(self.query_encoder, self.code_encoder)
             del self.train_dataset.original_data  # save memory
         return DataLoader(
