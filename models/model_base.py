@@ -24,8 +24,6 @@ class ModelBase(pl.LightningModule):
         self.valid_dataset = valid_dataset
         self.test_dataset = test_dataset
 
-        self.init_encoders()
-
     def forward(self, batch):
         code_embs = self.code_encoder(
             seq_tokens=batch["encoded_code"],
@@ -73,29 +71,16 @@ class ModelBase(pl.LightningModule):
         avg_mrr = torch.stack([x["mrr"] for x in out]).mean()
         log_dict = {"test_mrr": avg_mrr}
 
-        wandb_path = f"haseebs/{self.logger.experiment.project}/{self.logger.experiment.id}"
-        run = wandb.Api().run(wandb_path)
-        run.summary["test_mrr"] = avg_mrr
+        try:
+            wandb_path = f"haseebs/{self.logger.experiment.project}/{self.logger.experiment.id}"
+            run = wandb.Api().run(wandb_path)
+        except Exception:
+            print(f'Wandb path: {wandb_path} not found. Maybe wandb syncing was turned off during training')
+            run = self.logger.experiment
+        run.summary["test_mrr"] = avg_mrr.item()
         run.summary.update()
 
         return {"test_mrr": avg_mrr, "progress_bar": log_dict, "log": log_dict}
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.hypers["learning_rate"])
-
-    def init_encoders(self):
-        encoder_factory = EncoderFactory(self.hypers)
-        self.code_encoder = encoder_factory.get_encoder(self.hypers["code_encoder_type"])
-        self.query_encoder = encoder_factory.get_encoder(self.hypers["query_encoder_type"])
-
-        # TODO cleanup this mess
-        for sample in self.train_dataset.original_data:
-            self.code_encoder.update_tokens_from_sample(sample["code_tokens"])
-            self.query_encoder.update_tokens_from_sample(
-                [t.lower() for t in sample["docstring_tokens"]]
-            )
-        self.code_encoder.build_vocabulary()
-        self.query_encoder.build_vocabulary()
 
     def get_eval_metrics(self, code_embs: torch.tensor, query_embs: torch.tensor):
         query_norm = F.normalize(query_embs, dim=-1) + 1e-10
@@ -116,11 +101,41 @@ class ModelBase(pl.LightningModule):
 
         return total_loss, mrr
 
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.parameters(), lr=self.hypers["learning_rate"])
+
+    def init_encoders(self):
+        encoder_factory = EncoderFactory(self.hypers)
+        self.code_encoder = encoder_factory.get_encoder(self.hypers["code_encoder_type"])
+        self.query_encoder = encoder_factory.get_encoder(self.hypers["query_encoder_type"])
+
+        # TODO cleanup this mess
+        print("Building vocabulary...")
+        for sample in self.train_dataset.original_data:
+            self.code_encoder.update_tokens_from_sample(sample["code_tokens"])
+            self.query_encoder.update_tokens_from_sample(
+                [t.lower() for t in sample["docstring_tokens"]]
+            )
+        self.code_encoder.build_vocabulary()
+        self.query_encoder.build_vocabulary()
+
+    def prepare_data(self):
+        # do not prepare data again when testing
+        if len(self.train_dataset.original_data) == 0:
+            return
+
+        self.init_encoders()
+
+        print("Tokenizing data...")
+        self.train_dataset.encode_data(self.query_encoder, self.code_encoder)
+        self.valid_dataset.encode_data(self.query_encoder, self.code_encoder)
+        self.test_dataset.encode_data(self.query_encoder, self.code_encoder)
+
+        # free up memory
+        self.train_dataset.original_data = []
+        self.valid_dataset.original_data = []
+
     def train_dataloader(self):
-        # TODO Why is this being called more than once
-        if len(self.train_dataset.encoded_data) == 0:
-            self.train_dataset.encode_data(self.query_encoder, self.code_encoder)
-            del self.train_dataset.original_data  # save memory
         return DataLoader(
             dataset=self.train_dataset,
             batch_size=self.hypers["batch_size"],
@@ -129,9 +144,6 @@ class ModelBase(pl.LightningModule):
         )
 
     def val_dataloader(self):
-        if len(self.valid_dataset.encoded_data) == 0:
-            self.valid_dataset.encode_data(self.query_encoder, self.code_encoder)
-            del self.valid_dataset.original_data  # save memory
         return DataLoader(
             dataset=self.valid_dataset,
             batch_size=self.hypers["batch_size"],
@@ -140,7 +152,6 @@ class ModelBase(pl.LightningModule):
         )
 
     def test_dataloader(self):
-        self.test_dataset.encode_data(self.query_encoder, self.code_encoder)
         return DataLoader(
             dataset=self.test_dataset,
             batch_size=self.hypers["batch_size"],

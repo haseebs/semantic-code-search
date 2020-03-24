@@ -39,9 +39,8 @@ class CSNDataset(Dataset):
                         self.read_jsonl(path=os.path.join(path, data_file))
                     )
 
-    def encode_data(
-        self, query_encoder: EncoderBase, code_encoder: EncoderBase
-    ) -> None:  # TODO may need to move to encoder class to handle encoders that come with their own tokenizers
+    def encode_data(self, query_encoder: EncoderBase, code_encoder: EncoderBase) -> None:
+        # TODO may need to move to encoder class to handle encoders that come with their own tokenizers
         for sample in self.original_data:
             enc_query, enc_query_mask = convert_and_pad_token_sequence(
                 query_encoder.vocabulary,
