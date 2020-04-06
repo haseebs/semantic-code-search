@@ -98,7 +98,7 @@ class ModelBase(pl.LightningModule):
         return total_loss, mrr, similarity_scores, ranks
 
     def make_examples(self, batch, similarity_scores, ranks):
-        max_examples = 50
+        max_examples = 250
         language = self.test_dataset.original_data[0]["language"]
         predictions = torch.argmax(similarity_scores, dim=1)
         r = random.sample(range(self.hypers["batch_size"]), max_examples)

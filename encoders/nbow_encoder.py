@@ -11,6 +11,7 @@ class NbowEncoder(EncoderBase):
             self.hypers["vocab_size"], self.hypers["embedding_dim"]
         )
         self.dropout = nn.Dropout(p=self.hypers["dropout_prob"])
+        nn.init.xavier_uniform_(self.embeddings.weight)
 
     def forward(self, seq_tokens, seq_tokens_mask, seq_len):
         seq_token_embeddings = self.dropout(self.embeddings(seq_tokens))
