@@ -50,7 +50,7 @@ class CSNDataset(Dataset):
         for idx, sample in enumerate(self.original_data):
             enc_query, enc_query_mask = convert_and_pad_token_sequence(
                 query_encoder.vocabulary,
-                sample["docstring_tokens"],
+                [t.lower() for t in sample["docstring_tokens"]],
                 self.hypers["query_max_num_tokens"],
             )
             enc_code, enc_code_mask = convert_and_pad_token_sequence(
