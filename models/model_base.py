@@ -74,6 +74,7 @@ class ModelBase(pl.LightningModule):
     def test_epoch_end(self, out):
         avg_mrr = torch.stack([x["mrr"] for x in out]).mean()
         log_dict = {"test_mrr": avg_mrr}
+        wandb.run.summary['test_mrr'] = avg_mrr.item() # shouldnt have to do this
         return {"test_mrr": avg_mrr, "progress_bar": log_dict, "log": log_dict}
 
     def get_eval_metrics(self, code_embs: torch.tensor, query_embs: torch.tensor):
