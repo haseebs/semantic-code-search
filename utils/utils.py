@@ -28,9 +28,7 @@ def convert_and_pad_token_sequence(
     if isinstance(token_vocab, BpeVocabulary):
         token_ids = np.array(
             list(
-                token_vocab.transform(
-                    [token_sequence], fixed_length=output_tensor_size
-                )
+                token_vocab.transform([token_sequence], fixed_length=output_tensor_size)
             )[0]
         )
         token_mask = np.array(

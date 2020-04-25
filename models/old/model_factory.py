@@ -19,10 +19,7 @@ class ModelFactory:
     def get_model(self, model_type: str = "nbow_model"):
         if model_type == "nbow_model":
             return NbowModel(
-                self.hypers,
-                self.train_dataset,
-                self.valid_dataset,
-                self.test_dataset,
+                self.hypers, self.train_dataset, self.valid_dataset, self.test_dataset,
             )
         else:
             print(f"Model: {model_type} is not implemented!")

@@ -65,16 +65,14 @@ class ModelBase(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         code_embs, query_embs = self.forward(batch)
-        _, mrr, similarity_scores, ranks = self.get_eval_metrics(
-            code_embs, query_embs
-        )
+        _, mrr, similarity_scores, ranks = self.get_eval_metrics(code_embs, query_embs)
         self.make_examples(batch, similarity_scores, ranks)
         return {"mrr": mrr}
 
     def test_epoch_end(self, out):
         avg_mrr = torch.stack([x["mrr"] for x in out]).mean()
         log_dict = {"test_mrr": avg_mrr}
-        wandb.run.summary['test_mrr'] = avg_mrr.item() # shouldnt have to do this
+        wandb.run.summary["test_mrr"] = avg_mrr.item()  # shouldnt have to do this
         return {"test_mrr": avg_mrr, "progress_bar": log_dict, "log": log_dict}
 
     def get_eval_metrics(self, code_embs: torch.tensor, query_embs: torch.tensor):
@@ -108,14 +106,12 @@ class ModelBase(pl.LightningModule):
         selected_predictions = predictions[r]
         predicted_original_idx = batch["original_data_idx"][r]
         predicted_original_data = [
-            self.test_dataset.original_data[i]["code"]
-            for i in predicted_original_idx
+            self.test_dataset.original_data[i]["code"] for i in predicted_original_idx
         ]
 
         query_original_idx = batch["original_data_idx"][r]
         query_original_data = [
-            self.test_dataset.original_data[i]["docstring"]
-            for i in query_original_idx
+            self.test_dataset.original_data[i]["docstring"] for i in query_original_idx
         ]
 
         examples_table = []

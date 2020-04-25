@@ -31,10 +31,8 @@ class CSNDataset(Dataset):
             yield {k: v for k, v in json.loads(line).items() if k in self.keep_keys}
 
     def read_data(self, data_split: str = "train") -> None:
-        data_dirs = open("data_dirs.txt", "rt", encoding="utf-8")
-        paths = [
-            os.path.join(path, data_split) for path in data_dirs.read().splitlines()
-        ]
+        # data_dirs = open("data_dirs.txt", "rt", encoding="utf-8")
+        paths = [os.path.join(path, data_split) for path in self.hypers["data_dirs"]]
         for path in paths:
             data_files = sorted(os.listdir(path))
             for data_file in data_files:

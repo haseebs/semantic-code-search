@@ -87,9 +87,7 @@ class BpeVocabulary(typing.Sized):
             ):
                 for i in range(len(sub_tokens) - ngram_size + 1):
                     bp_counts[
-                        joined_tokens[
-                            token_offsets[i] : token_offsets[i + ngram_size]
-                        ]
+                        joined_tokens[token_offsets[i] : token_offsets[i + ngram_size]]
                     ] += count
 
             yield bp_counts
@@ -145,12 +143,8 @@ class BpeVocabulary(typing.Sized):
         )
         self.bpe_vocab = self.learn_bpe_vocab(remaining_words.elements())
 
-        self.inverse_word_vocab = {
-            idx: token for token, idx in self.word_vocab.items()
-        }
-        self.inverse_bpe_vocab = {
-            idx: token for token, idx in self.bpe_vocab.items()
-        }
+        self.inverse_word_vocab = {idx: token for token, idx in self.word_vocab.items()}
+        self.inverse_bpe_vocab = {idx: token for token, idx in self.bpe_vocab.items()}
 
     @staticmethod
     def trim_vocab(n: int, vocab: Dict[str, int]) -> None:
@@ -249,18 +243,14 @@ class BpeVocabulary(typing.Sized):
                 elif idx in self.inverse_bpe_vocab:
                     if self.strict:
                         raise ValueError(
-                            "Found BPE index {} when not rebuilding word!".format(
-                                idx
-                            )
+                            "Found BPE index {} when not rebuilding word!".format(idx)
                         )
                     else:
                         words.append(self.inverse_bpe_vocab[idx])
 
                 else:
                     raise ValueError(
-                        "Got index {} that was not in word or BPE vocabs!".format(
-                            idx
-                        )
+                        "Got index {} that was not in word or BPE vocabs!".format(idx)
                     )
 
             yield " ".join(w for w in words if w != "")
