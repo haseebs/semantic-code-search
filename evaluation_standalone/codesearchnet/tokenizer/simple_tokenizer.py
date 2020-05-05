@@ -5,7 +5,6 @@ from codesearchnet.tokenizer.tokenizer import TokenizerInterface
 
 
 class SimpleTokenizer(TokenizerInterface):
-
     def __init__(self, stop_words_path, split_words_path):
         """
         :param stop_words_path: path to txt file, which contains in each line one stop word
@@ -14,10 +13,10 @@ class SimpleTokenizer(TokenizerInterface):
         self.stop_words = []
         self.split_words = []
         if os.path.isfile(stop_words_path):
-            with open(stop_words_path, 'r') as f:
+            with open(stop_words_path, "r") as f:
                 self.stop_words = f.read().splitlines()
         if os.path.isfile(split_words_path):
-            with open(split_words_path, 'r') as f:
+            with open(split_words_path, "r") as f:
                 self.split_words = f.read().splitlines()
 
     def format_tokens(self, tokens):
@@ -86,7 +85,7 @@ class SimpleTokenizer(TokenizerInterface):
     def split_camelcase(sample):
         new_sample = []
         for token in sample:
-            camelcase_splits = re.sub('([a-z])([A-Z])', r'\1 \2', token).split()
+            camelcase_splits = re.sub("([a-z])([A-Z])", r"\1 \2", token).split()
             for new_token in camelcase_splits:
                 if len(new_token) > 0:
                     new_sample.append(new_token.lower())

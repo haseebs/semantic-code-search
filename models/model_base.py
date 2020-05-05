@@ -145,12 +145,20 @@ class ModelBase(pl.LightningModule):
 
     def init_encoders(self):
         encoder_factory = EncoderFactory(self.hypers)
-        self.code_encoder = encoder_factory.get_encoder(
-            self.hypers["code_encoder_type"]
-        )
-        self.query_encoder = encoder_factory.get_encoder(
-            self.hypers["query_encoder_type"]
-        )
+        if self.hypers["encoder_sharing_mode"] == "per_code_language":
+            raise NotImplementedError
+        elif self.hypers["encoder_sharing_mode"] == "per_input_source":
+            self.code_encoder = encoder_factory.get_encoder(
+                self.hypers["code_encoder_type"]
+            )
+            self.query_encoder = encoder_factory.get_encoder(
+                self.hypers["query_encoder_type"]
+            )
+        elif self.hypers["encoder_sharing_mode"] == "all":
+            self.code_encoder = encoder_factory.get_encoder(
+                self.hypers["code_encoder_type"]
+            )
+            self.query_encoder = self.code_encoder
 
         # TODO cleanup this mess
         print("Building vocabulary...")

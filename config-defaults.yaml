@@ -1,9 +1,15 @@
+model_type:
+  desc:
+  value: transformer_model
 code_encoder_type:
   desc:
-  value: "nbow_encoder"
+  value: "self_attention_encoder"
 query_encoder_type:
   desc:
-  value: "nbow_encoder"
+  value: "self_attention_encoder"
+encoder_sharing_mode:
+  desc:
+  value: "all"
 code_max_num_tokens:
   desc:
   value: 200
@@ -12,10 +18,10 @@ query_max_num_tokens:
   value: 30
 learning_rate:
   desc:
-  value: 0.01
+  value: 5e-4
 batch_size:
   desc:
-  value: 1000
+  value: 256
 loss:
   desc:
   value: "cosine"
@@ -58,3 +64,12 @@ keep_keys_test:
 data_dirs:
   desc:
   value: ["../CodeSearchNet_official/resources/data/ruby/final/jsonl"]
+self_attention_nheads:
+  desc:
+  value: 8
+self_attention_nhid:
+  desc:
+  value: 512
+self_attention_nlayers:
+  desc:
+  value: 3

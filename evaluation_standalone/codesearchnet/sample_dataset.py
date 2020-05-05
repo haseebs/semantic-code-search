@@ -4,7 +4,7 @@ import json
 
 
 class SampleDataset(Dataset):
-    def __init__(self, sample_path, directory='test', number_of_samples=None):
+    def __init__(self, sample_path, directory="test", number_of_samples=None):
         self.samples = []
         counter = 0
 

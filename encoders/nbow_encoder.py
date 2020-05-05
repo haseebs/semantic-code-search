@@ -5,12 +5,18 @@ from typing import Dict, Any
 
 
 class NbowEncoder(EncoderBase):
-    def __init__(self, hyperparameters: Dict[str, Any]):
-        super().__init__(hyperparameters)
-        self.embeddings = nn.Embedding(
-            self.hypers["vocab_size"], self.hypers["embedding_dim"]
-        )
-        self.dropout = nn.Dropout(p=self.hypers["dropout_prob"])
+    def __init__(
+        self,
+        vocab_size: int,
+        embedding_dim: int,
+        dropout: float,
+        vocab_count_threshold: int,
+        use_bpe: bool,
+        vocab_pct_bpe: float,
+    ):
+        super().__init__(vocab_size, vocab_count_threshold, use_bpe, vocab_pct_bpe)
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.dropout = nn.Dropout(p=dropout)
         nn.init.xavier_uniform_(self.embeddings.weight)
 
     def forward(self, seq_tokens, seq_tokens_mask, seq_len):

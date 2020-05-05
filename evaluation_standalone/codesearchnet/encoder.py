@@ -3,12 +3,11 @@ from enum import Enum
 
 
 class Category(Enum):
-    DOC_STR = 'docstring'
-    CODE = 'code'
+    DOC_STR = "docstring"
+    CODE = "code"
 
 
 class EncoderInterface(ABC):
-
     @abstractmethod
     def apply(self, samples, category):
         """

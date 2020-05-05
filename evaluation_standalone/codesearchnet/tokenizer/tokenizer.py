@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 
 class TokenizerInterface(ABC):
-
     @abstractmethod
     def format_tokens(self, tokens):
         pass

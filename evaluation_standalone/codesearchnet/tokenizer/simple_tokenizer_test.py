@@ -3,14 +3,18 @@ import os
 
 from codesearchnet.tokenizer.simple_tokenizer import SimpleTokenizer
 
-STOP_WORDS = os.path.join('..', 'test', 'stopwords.txt')
-SPLIT_WORDS = os.path.join('..', 'test', 'splitwords.txt')
+STOP_WORDS = os.path.join("..", "test", "stopwords.txt")
+SPLIT_WORDS = os.path.join("..", "test", "splitwords.txt")
 
 
 class TestTokenizer(unittest.TestCase):
-
     def test_format(self):
-        test = ["hallo i", "bims_1", "funnyTestYeah!", "\u5206\u949f\u7ebf\u56de\u6d4b\u7684\u65f6\u5019\u7684gap"]
+        test = [
+            "hallo i",
+            "bims_1",
+            "funnyTestYeah!",
+            "\u5206\u949f\u7ebf\u56de\u6d4b\u7684\u65f6\u5019\u7684gap",
+        ]
         tokenizer = SimpleTokenizer(STOP_WORDS, SPLIT_WORDS)
         result = tokenizer.format_tokens(test)
         self.assertEqual("hallo", result[0])
@@ -70,5 +74,5 @@ class TestTokenizer(unittest.TestCase):
         self.assertEqual(6, len(result))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

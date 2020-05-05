@@ -7,16 +7,26 @@ from tqdm import tqdm
 
 N_TREES = 10
 K = 100
-BATCH_SIZE= 1000
+BATCH_SIZE = 1000
+
 
 class Search:
     def __init__(self, code_encoder, doc_encoder):
         self.code_encoder = code_encoder
         self.doc_encoder = doc_encoder
-        self.metric = 'angular'  # or angular
+        self.metric = "angular"  # or angular
 
-    def apply(self, sample_path, writer, number_of_samples=None, tokenizer=None,
-              directory='test', load_annoy='', annoy_save_name='', metric=None):
+    def apply(
+        self,
+        sample_path,
+        writer,
+        number_of_samples=None,
+        tokenizer=None,
+        directory="test",
+        load_annoy="",
+        annoy_save_name="",
+        metric=None,
+    ):
         """
         :param sample_path: path to directory of samples, for example "data/java/final/jsonl/"
         :param writer: summary writer which saves the result
@@ -37,9 +47,11 @@ class Search:
 
         # read samples
         all_samples = SampleDataset(sample_path, directory, number_of_samples)
-        batched_samples = ichunked(all_samples, BATCH_SIZE) #TODO not Dataset class anymore?
+        batched_samples = ichunked(
+            all_samples, BATCH_SIZE
+        )  # TODO not Dataset class anymore?
 
-        #TODO Last batch will be < BATCH_SIZE and thus will have lesser distractors
+        # TODO Last batch will be < BATCH_SIZE and thus will have lesser distractors
         rank_list = []
         for samples in batched_samples:
             # create annoy index
@@ -49,10 +61,16 @@ class Search:
             code_vector_gen = self.code_encoder.apply(samples, Category.CODE)
             doc_vector_gen = self.doc_encoder.apply(samples, Category.DOC_STR)
 
-            annoy = self.build_annoy_index(code_vector_gen, annoy_size, len(samples), load_annoy, annoy_save_name)
+            annoy = self.build_annoy_index(
+                code_vector_gen, annoy_size, len(samples), load_annoy, annoy_save_name
+            )
 
             # calculate ranks for each doc_vector
-            for index, doc_vector in tqdm(enumerate(doc_vector_gen), desc=f"Calculating distances", total=len(samples)):
+            for index, doc_vector in tqdm(
+                enumerate(doc_vector_gen),
+                desc=f"Calculating distances",
+                total=len(samples),
+            ):
                 k_indices = annoy.get_nns_by_vector(doc_vector, K)
                 rank_dict = {rank: i for rank, i in enumerate(k_indices, 1)}
                 rank_list.append(rank_dict)
@@ -61,12 +79,18 @@ class Search:
         evaluator.get_final_results()
         return rank_list
 
-    def build_annoy_index(self, vector_generator, vector_size, samples_size, load_annoy, save_name):
+    def build_annoy_index(
+        self, vector_generator, vector_size, samples_size, load_annoy, save_name
+    ):
         index = AnnoyIndex(vector_size, self.metric)
         if load_annoy:
             index.load(load_annoy)
         else:
-            for i, code_vector in tqdm(enumerate(vector_generator), desc=f"Building annoy index", total=samples_size):
+            for i, code_vector in tqdm(
+                enumerate(vector_generator),
+                desc=f"Building annoy index",
+                total=samples_size,
+            ):
                 index.add_item(i, code_vector)
             index.build(N_TREES)
 
@@ -74,4 +98,3 @@ class Search:
             index.save(save_name)
 
         return index
-

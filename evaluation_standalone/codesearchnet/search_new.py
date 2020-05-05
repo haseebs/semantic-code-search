@@ -9,22 +9,31 @@ from tqdm import tqdm
 
 N_TREES = 10
 K = 100
-BATCH_SIZE= 1000
+BATCH_SIZE = 1000
+
 
 class SearchNew:
     def __init__(self, code_encoder, doc_encoder):
         self.code_encoder = code_encoder
         self.doc_encoder = doc_encoder
-        self.metric = 'euclidean'  # or angular
+        self.metric = "euclidean"  # or angular
 
     def compute_ranks(self, src_representations, tgt_representations):
         distances = cdist(src_representations, tgt_representations, metric="cosine")
         correct_elements = np.expand_dims(np.diag(distances), axis=-1)
         return np.sum(distances <= correct_elements, axis=-1), distances
 
-
-    def apply(self, sample_path, writer, number_of_samples=None, tokenizer=None,
-              directory='test', load_annoy='', annoy_save_name='', metric=None):
+    def apply(
+        self,
+        sample_path,
+        writer,
+        number_of_samples=None,
+        tokenizer=None,
+        directory="test",
+        load_annoy="",
+        annoy_save_name="",
+        metric=None,
+    ):
         """
         :param sample_path: path to directory of samples, for example "data/java/final/jsonl/"
         :param writer: summary writer which saves the result
@@ -44,9 +53,11 @@ class SearchNew:
 
         # read samples
         all_samples = SampleDataset(sample_path, directory, number_of_samples)
-        batched_samples = ichunked(all_samples, BATCH_SIZE) #TODO not Dataset class anymore?
+        batched_samples = ichunked(
+            all_samples, BATCH_SIZE
+        )  # TODO not Dataset class anymore?
 
-        #TODO Last batch will be < BATCH_SIZE and thus will have lesser distractors
+        # TODO Last batch will be < BATCH_SIZE and thus will have lesser distractors
         sum_mrr = 0
         for samples in batched_samples:
             # create annoy index

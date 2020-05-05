@@ -6,9 +6,18 @@ from utils.bpevocabulary import BpeVocabulary
 
 
 class EncoderBase(nn.Module):
-    def __init__(self, hyperparameters: Dict[str, Any]):
+    def __init__(
+        self,
+        vocab_size: int,
+        vocab_count_threshold: int,
+        use_bpe: bool,
+        vocab_pct_bpe: float,
+    ):
         super().__init__()
-        self.hypers = hyperparameters
+        self.vocab_size = vocab_size
+        self.vocab_count_threshold = vocab_count_threshold
+        self.use_bpe = use_bpe
+        self.vocab_pct_bpe = vocab_pct_bpe
         self.token_counter = Counter()
         self.vocabulary = None
 
@@ -16,15 +25,16 @@ class EncoderBase(nn.Module):
         self.token_counter.update(sample_tokens)
 
     def build_vocabulary(self) -> None:
-        if self.hypers["use_bpe"]:
+        if self.vocabulary != None:
+            return
+        if self.use_bpe:
             self.vocabulary = BpeVocabulary(
-                vocab_size=self.hypers["vocab_size"],
-                pct_bpe=self.hypers["vocab_pct_bpe"],
+                vocab_size=self.vocab_size, pct_bpe=self.vocab_pct_bpe,
             )
             self.vocabulary.fit(self.token_counter)
         else:
             self.vocabulary = Vocabulary.create_vocabulary(
                 tokens=self.token_counter,
-                max_size=self.hypers["vocab_size"],
-                count_threshold=self.hypers["vocab_count_threshold"],
+                max_size=self.vocab_size,
+                count_threshold=self.vocab_count_threshold,
             )

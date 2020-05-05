@@ -9,7 +9,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 from dataset import CSNDataset
-from models.model_base import ModelBase
+from models.model_factory import ModelFactory
 
 
 def run():
@@ -25,7 +25,10 @@ def run():
         hypers=wandb.config, keep_keys=wandb.config["keep_keys_test"], data_split="test"
     )
 
-    model = ModelBase(wandb.config, train_dataset, valid_dataset, test_dataset)
+    model_factory = ModelFactory(
+        wandb.config, train_dataset, valid_dataset, test_dataset
+    )
+    model = model_factory.get_model(wandb.config["model_type"])
 
     early_stop_callback = EarlyStopping(
         monitor="val_mrr",
