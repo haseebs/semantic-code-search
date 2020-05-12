@@ -18,7 +18,7 @@ query_max_num_tokens:
   value: 30
 learning_rate:
   desc:
-  value: 5e-4
+  value: 0.001
 batch_size:
   desc:
   value: 256
