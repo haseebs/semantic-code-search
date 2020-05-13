@@ -3,6 +3,7 @@ import wandb
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
+from pytorch_metric_learning import losses
 
 from typing import Dict, Any
 from torch.utils.data import Dataset, DataLoader
@@ -79,16 +80,24 @@ class ModelBase(pl.LightningModule):
         query_norm = F.normalize(query_embs, dim=-1) + 1e-10
         code_norm = F.normalize(code_embs, dim=-1) + 1e-10
         similarity_scores = code_norm @ query_norm.T
-        neg_matrix = torch.diag(
-            torch.tensor([float("-inf")] * similarity_scores.shape[0])
+        # neg_matrix = torch.diag(
+        #    torch.tensor([float("-inf")] * similarity_scores.shape[0])
+        # )
+        # per_sample_loss = torch.max(
+        #    torch.tensor(0.0).cuda(),
+        #    self.hypers["margin"]
+        #    - similarity_scores.diagonal()
+        #    + torch.max(F.relu(similarity_scores + neg_matrix.cuda()), dim=-1)[0],
+        # )
+        # total_loss = per_sample_loss.mean()
+        embs = torch.cat([query_embs, code_embs])
+        labels = torch.arange(1, query_embs.shape[0] + 1)
+        labels = torch.cat([labels, labels])
+        loss_func = losses.TripletMarginLoss(
+            margin=self.hypers["margin"], triplets_per_anchor="all"
         )
-        per_sample_loss = torch.max(
-            torch.tensor(0.0).cuda(),
-            self.hypers["margin"]
-            - similarity_scores.diagonal()
-            + torch.max(F.relu(similarity_scores + neg_matrix.cuda()), dim=-1)[0],
-        )
-        total_loss = per_sample_loss.mean()
+        total_loss = loss_func(embs, labels)
+
         correct_scores = similarity_scores.diagonal().detach()
         compared_scores = similarity_scores >= correct_scores.unsqueeze(dim=-1)
         ranks = compared_scores.sum(dim=1)
@@ -97,7 +106,8 @@ class ModelBase(pl.LightningModule):
         return total_loss, mrr, similarity_scores, ranks
 
     def make_examples(self, batch, similarity_scores, ranks):
-        max_examples = 250
+        # max_examples = 250 if 250 < self.hypers["batch_size"] else self.hypers["batch_size"]
+        max_examples = 100
         language = self.test_dataset.original_data[0]["language"]
         predictions = torch.argmax(similarity_scores, dim=1)
         r = random.sample(range(self.hypers["batch_size"]), max_examples)
@@ -209,7 +219,7 @@ class ModelBase(pl.LightningModule):
         return DataLoader(
             dataset=self.test_dataset,
             batch_size=self.hypers["batch_size"],
-            shuffle=False,
+            shuffle=True,
             drop_last=True,
         )
 

@@ -21,7 +21,7 @@ learning_rate:
   value: 0.001
 batch_size:
   desc:
-  value: 256
+  value: 128
 loss:
   desc:
   value: "cosine"
@@ -39,7 +39,7 @@ gradient_clip:
   value: 1
 margin:
   desc:
-  value: 1
+  value: 0.1
 max_epochs:
   desc:
   value: 300
@@ -63,7 +63,7 @@ keep_keys_test:
   value: ["language", "docstring_tokens", "code_tokens", "docstring", "code"]
 data_dirs:
   desc:
-  value: ["../CodeSearchNet_official/resources/data/ruby/final/jsonl"]
+  value: ["../CodeSearchNet_official/resources/data/java/final/jsonl"]
 self_attention_nheads:
   desc:
   value: 8
