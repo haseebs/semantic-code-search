@@ -7,6 +7,7 @@ from torch.utils.data import Dataset
 
 from encoders.encoder_base import EncoderBase
 from utils.utils import convert_and_pad_token_sequence
+from utils.utils import convert_and_pad_tree_sequence
 
 
 class CSNDataset(Dataset):
@@ -45,33 +46,54 @@ class CSNDataset(Dataset):
         self, query_encoder: EncoderBase, code_encoder: EncoderBase
     ) -> None:
         # TODO may need to move to encoder class to handle encoders that come with their own tokenizers
+        count_empty_code = 0
         for idx, sample in enumerate(self.original_data):
+
             enc_query, enc_query_mask = convert_and_pad_token_sequence(
                 query_encoder.vocabulary,
                 [t.lower() for t in sample["docstring_tokens"]],
                 self.hypers["query_max_num_tokens"],
             )
-            enc_code, enc_code_mask = convert_and_pad_token_sequence(
-                code_encoder.vocabulary,
-                sample["code_tokens"],
-                self.hypers["code_max_num_tokens"],
-            )
+
+            if self.hypers["code_encoder_type"] == "tree_attention_encoder":
+                (
+                    enc_code,
+                    enc_code_mask,
+                    code_ast_descendants,
+                ) = convert_and_pad_tree_sequence(
+                    code_encoder.vocabulary,
+                    sample["code_ast_tokens"],
+                    sample["code_ast_descendants"],
+                    self.hypers["code_max_num_tokens"],
+                )
+            else:
+                enc_code, enc_code_mask = convert_and_pad_token_sequence(
+                    code_encoder.vocabulary,
+                    sample["code_tokens"],
+                    self.hypers["code_max_num_tokens"],
+                )
 
             enc_query_length = int(np.sum(enc_query_mask))
             enc_code_length = int(np.sum(enc_code_mask))
-            assert enc_query_length > 0 and enc_code_length > 0
+            #TODO what to do about empty stuff
+            if not (enc_code_length > 0):
+                count_empty_code += 1
+                continue
+            assert enc_query_length > 0 #and enc_code_length > 0
 
-            self.encoded_data.append(
-                {
-                    "original_data_idx": idx,
-                    "encoded_query": enc_query,
-                    "encoded_query_mask": enc_query_mask,
-                    "encoded_query_length": enc_query_length,
-                    "encoded_code": enc_code,
-                    "encoded_code_mask": enc_code_mask,
-                    "encoded_code_length": enc_code_length,
-                }
-            )
+            encoded_data_item = {
+                "original_data_idx": idx,
+                "encoded_query": enc_query,
+                "encoded_query_mask": enc_query_mask,
+                "encoded_query_length": enc_query_length,
+                "encoded_code": enc_code,
+                "encoded_code_mask": enc_code_mask,
+                "encoded_code_length": enc_code_length,
+            }
+            if self.hypers["code_encoder_type"] == "tree_attention_encoder":
+                encoded_data_item["code_ast_descendants"] = code_ast_descendants
+            self.encoded_data.append(encoded_data_item)
+        print("Samples rejected due to no AST built: ", count_empty_code)
 
 
 if __name__ == "__main__":

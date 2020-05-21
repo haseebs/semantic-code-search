@@ -52,7 +52,7 @@ def run():
         checkpoint_callback=checkpoint_callback,
         progress_bar_refresh_rate=10,
         logger=logger,
-        # train_percent_check=0.1,
+        # train_percent_check=0.01,
         gpus=1,
     )
 

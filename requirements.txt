@@ -1,0 +1,10 @@
+dpu-utils==0.2.8
+javalang==0.13.0
+more-itertools==8.2.0
+numpy==1.18.1
+pytorch-lightning==0.7.3
+pytorch-metric-learning==0.9.85
+pytorch-transformers==1.2.0
+torch==1.4.0
+tqdm==4.43.0
+wandb==0.8.35

@@ -173,7 +173,10 @@ class ModelBase(pl.LightningModule):
         # TODO cleanup this mess
         print("Building vocabulary...")
         for sample in self.train_dataset.original_data:
-            self.code_encoder.update_tokens_from_sample(sample["code_tokens"])
+            if self.hypers["code_encoder_type"] == "tree_attention_encoder":
+                self.code_encoder.update_tokens_from_sample(sample["code_ast_tokens"])
+            else:
+                self.code_encoder.update_tokens_from_sample(sample["code_tokens"])
             self.query_encoder.update_tokens_from_sample(
                 [t.lower() for t in sample["docstring_tokens"]]
             )

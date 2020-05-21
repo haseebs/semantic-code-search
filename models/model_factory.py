@@ -2,6 +2,7 @@ from typing import Dict, Any
 from torch.utils.data import Dataset
 from .model_base import ModelBase
 from .transformer_model import TransformerModel
+from .tree_transformer_model import TreeTransformerModel
 
 
 class ModelFactory:
@@ -24,6 +25,10 @@ class ModelFactory:
             )
         elif model_type == "transformer_model":
             return TransformerModel(
+                self.hypers, self.train_dataset, self.valid_dataset, self.test_dataset,
+            )
+        elif model_type == "tree_transformer_model":
+            return TreeTransformerModel(
                 self.hypers, self.train_dataset, self.valid_dataset, self.test_dataset,
             )
         else:
