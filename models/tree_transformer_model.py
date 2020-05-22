@@ -29,7 +29,7 @@ class TreeTransformerModel(TransformerModel):
             src=batch["encoded_code"],
             seq_tokens_mask=batch["encoded_code_mask"],
             seq_len=batch["encoded_code_length"],
-            src_descendants=batch["code_ast_descendants"]
+            src_descendants=batch["code_ast_descendants"],
         )
         query_embs = self.query_encoder(
             src=batch["encoded_query"],

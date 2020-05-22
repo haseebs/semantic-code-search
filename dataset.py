@@ -75,11 +75,11 @@ class CSNDataset(Dataset):
 
             enc_query_length = int(np.sum(enc_query_mask))
             enc_code_length = int(np.sum(enc_code_mask))
-            #TODO what to do about empty stuff
+            # TODO what to do about empty stuff
             if not (enc_code_length > 0):
                 count_empty_code += 1
                 continue
-            assert enc_query_length > 0 #and enc_code_length > 0
+            assert enc_query_length > 0  # and enc_code_length > 0
 
             encoded_data_item = {
                 "original_data_idx": idx,

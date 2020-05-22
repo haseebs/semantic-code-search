@@ -35,75 +35,17 @@ def convert_and_pad_tree_sequence(
                 token_vocab.transform([token_sequence], fixed_length=output_tensor_size)
             )[0]
         )
-        token_mask = np.array(
-            [1 if token_ids[i] > 0 else 0 for i in range(len(token_ids))]
-        )
-        # TODO can be refactored to use the ids of bpe sow and eow tokens directly
-        tokens_with_bpe = []
-        for i in token_ids:
-            if i in token_vocab.inverse_word_vocab:
-                tokens_with_bpe.append(token_vocab.inverse_word_vocab[i])
-            else:
-                tokens_with_bpe.append([token_vocab.inverse_bpe_vocab[i], "@@"])
-        #c=0
-        #inside_bpe=False
-        #for idx, token_id in enumerate(token_ids):
-        #    if token_id == token_vocab.bpe_vocab[token_vocab.SOW]:
-        #        inside_bpe = True
-        #    elif token_id == token_vocab.bpe_vocab[token_vocab.EOW]:
-        #        inside_bpe = False
-        #    #print('ye-',token_id)
-        #    if not inside_bpe:
-        #        #print(token_sequence[c])
-        #        if (token_descendants[c] == 0):
-        #            from IPython import embed; embed()
-        #        assert(token_descendants[c] == 0, 'Split tokens shouldnt have children')
-        #        c+=1
-
-
-        tokens_with_bpe = [t if isinstance(t, str) else t[0] for t in tokens_with_bpe]
-        # tokens_with_bpe_without_padding = [t for t in tokens_with_bpe if t != '__pad']
-        # tokens = remove_csn_bpe(tokens_with_bpe)
-
-        # create and pprint the original tree
-        # t = Tree.from_tokens_and_descendants(tokens, descendants=token_descendants, restore_wrapped_is_terminal=True)
-        # t.init_positions()
-        # t.pprint(print_position=True)
+        token_mask = np.int_(token_ids > 0)
 
         # apply bpe to parent array
-        bpe_descendants = apply_bpe_to_descendants(tokens_with_bpe, token_descendants)
-
-        # and recreate the tree with BPE
-        # we can't create a tree with padding tokens (no valid tree)
-        # new_tree = Tree.from_tokens_and_descendants(tokens_with_bpe_without_padding, bpe_descendants[:len(tokens_with_bpe_without_padding)])
-        # new_tree.init_positions()
-        # new_tree.pprint()
-
-        # we can use this array as src_descendants for relative tree transformer
-        # print("BPE'ized descendants:")
-        # print(len(bpe_descendants), bpe_descendants)
-
+        bpe_descendants = apply_bpe_to_descendants(token_ids, token_descendants,
+                                                   sow_idx=token_vocab.bpe_vocab[token_vocab.SOW],
+                                                   eow_idx=token_vocab.bpe_vocab[token_vocab.EOW])
+        #adding pad index to base
+        bpe_descendants[token_mask == 1] += token_vocab.word_vocab[token_vocab.PAD] + 1
         return token_ids, token_mask, bpe_descendants
-
-    if pad_from_left:
-        token_sequence = token_sequence[-output_tensor_size:]
     else:
-        token_sequence = token_sequence[:output_tensor_size]
-
-    sequence_length = len(token_sequence)
-    if pad_from_left:
-        start_idx = output_tensor_size - sequence_length
-    else:
-        start_idx = 0
-
-    token_ids = np.zeros(output_tensor_size, dtype=np.int32)
-    token_mask = np.zeros(output_tensor_size, dtype=np.float32)
-    for i, token in enumerate(token_sequence, start=start_idx):
-        token_ids[i] = token_vocab.get_id_or_unk(token)
-        token_mask[i] = True
-
-    return token_ids, token_mask, tokens_with_bpe
-
+        raise NotImplementedError
 
 def convert_and_pad_token_sequence(
     token_vocab: Union[Vocabulary, BpeVocabulary],
@@ -130,9 +72,9 @@ def convert_and_pad_token_sequence(
                 token_vocab.transform([token_sequence], fixed_length=output_tensor_size)
             )[0]
         )
-        token_mask = np.array(
-            [1 if token_ids[i] > 0 else 0 for i in range(len(token_ids))]
-        )
+        #TODO
+        token_mask = np.int_(token_ids > 0)
+
         return token_ids, token_mask
 
     if pad_from_left:

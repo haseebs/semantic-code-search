@@ -29,9 +29,13 @@ class EncoderBase(nn.Module):
         if self.vocabulary != None:
             return
         if self.use_bpe:
-            required_tokens = [t for t in self.token_counter if t.startswith('<[') and t.endswith(']>')]
+            required_tokens = [
+                t for t in self.token_counter if t.startswith("<[") and t.endswith("]>")
+            ]
             self.vocabulary = BpeVocabulary(
-                vocab_size=self.vocab_size, pct_bpe=self.vocab_pct_bpe, required_tokens=required_tokens
+                vocab_size=self.vocab_size,
+                pct_bpe=self.vocab_pct_bpe,
+                required_tokens=required_tokens,
             )
             self.vocabulary.fit(self.token_counter)
         else:

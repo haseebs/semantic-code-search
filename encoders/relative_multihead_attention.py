@@ -429,8 +429,11 @@ class RelativeMultiheadSelfAttention(MultiheadAttention):
             key_padding_mask = None
 
         if key_padding_mask is not None:
-            assert key_padding_mask.size(0) == bsz
-            assert key_padding_mask.size(1) == src_len
+            try:
+                assert key_padding_mask.size(0) == bsz
+                assert key_padding_mask.size(1) == src_len
+            except:
+                from IPython import embed; embed()
 
         if self.add_zero_attn:
             assert v is not None
@@ -461,18 +464,6 @@ class RelativeMultiheadSelfAttention(MultiheadAttention):
         )
 
         #### rpr attention ####
-        if relative_distances is None and (
-            self.key_rpr_embedding or self.value_rpr_embedding is not None
-        ):
-            with torch.no_grad():
-                relative_distances = generate_relative_distances_matrix(
-                    length_q=q.size(1),
-                    length_k=k.size(1),
-                    max_relative_distance=(self.num_rpr_embeddings // 2),
-                ).to(
-                    q.device
-                )  # [S, S]
-            # raise ValueError("Compute relative distances before!")
 
         assert relative_distances.ndimension() in {2, 3}
         assert relative_distances.size(-2) == q.size(1)

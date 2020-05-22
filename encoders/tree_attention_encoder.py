@@ -66,9 +66,9 @@ class TreeTransformerEncoderLayer(TransformerEncoderLayer):
             query=src,
             key=src,
             value=src,
-            key_padding_mask=src_key_padding_mask,
+            key_padding_mask=src_key_padding_mask.T,
             attn_mask=src_mask,
-            relative_distances=None,
+            relative_distances=relative_distances,
             tree_attn_mask=None,
             incidences=None,
             nonterminal_mask=None,
@@ -95,6 +95,10 @@ class TreeTransformerEncoder(TransformerEncoder):
     """
     _constants_ = ["norm"]
 
+    def __init__(self, encoder_layer, num_layers, norm=None, clamping_distance=3):
+        super().__init__(encoder_layer, num_layers, norm)
+        self.clamping_distance = clamping_distance
+
     def forward(
         self,
         src,
@@ -114,16 +118,18 @@ class TreeTransformerEncoder(TransformerEncoder):
         """
         output = src
 
+        #TODO check this if vocab changes
+        pad_mask = src_key_padding_mask.T #[B,S]
         incidences = node_incidence_matrix(
             src_descendants,
-            pad_idx=self.dictionary.pad(),
-            pad_mask=encoder_padding_mask,
+            pad_idx=0,
+            pad_mask=pad_mask,
         )
         relative_distances = generate_tree_relative_movements(
             node_incidences=incidences,
-            pad_idx=self.dictionary.pad(),
+            pad_idx=0,
             max_relative_distance=self.clamping_distance,
-            pad_mask=encoder_padding_mask,
+            pad_mask=pad_mask,
         )
 
         for mod in self.layers:
@@ -163,7 +169,7 @@ class TreeAttentionEncoder(EncoderBase):
             dropout,
             num_rpr_embeddings=2 * ((clamping_distance + 1) ** 2),
         )
-        self.transformer_encoder = TreeTransformerEncoder(encoder_layers, nlayers)
+        self.transformer_encoder = TreeTransformerEncoder(encoder_layers, nlayers, clamping_distance=clamping_distance)
         self.encoder = nn.Embedding(ntoken, ninp)
         self.ninp = ninp
         self.init_weights()
@@ -183,10 +189,11 @@ class TreeAttentionEncoder(EncoderBase):
 
     def forward(self, src, seq_tokens_mask, seq_len, src_descendants):
         seq_tokens_mask = (1 - seq_tokens_mask).T > 0
-        src = self.encoder(src) * math.sqrt(self.ninp)
+        src = src.T #[N,B]
+        src = self.encoder(src) * math.sqrt(self.ninp) #[N,B,D]
         output = self.transformer_encoder(
             src, src_key_padding_mask=seq_tokens_mask, src_descendants=src_descendants
-        )
-        seq_token_embeddings_sum = output.sum(dim=1)
-        seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)
+        ) #[N,B,D]
+        seq_token_embeddings_sum = output.sum(dim=0) #[N,D]
+        seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1) #[N,1]
         return seq_token_embeddings_sum / seq_lengths

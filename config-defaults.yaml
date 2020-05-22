@@ -21,7 +21,7 @@ learning_rate:
   value: 0.001
 batch_size:
   desc:
-  value: 128
+  value: 100
 loss:
   desc:
   value: "cosine"
@@ -63,7 +63,7 @@ keep_keys_test:
   value: ["language", "docstring_tokens", "code_tokens", "docstring", "code", "code_ast_tokens", "code_ast_descendants"]
 data_dirs:
   desc:
-  value: ["../data/data_ast/java/final/jsonl"]
+  value: ["../data/data_ast/ruby/final/jsonl"]
 self_attention_nheads:
   desc:
   value: 8

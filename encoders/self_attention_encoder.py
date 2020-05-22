@@ -54,6 +54,7 @@ class SelfAttentionEncoder(EncoderBase):
         #    self.src_mask = mask
 
         seq_tokens_mask = (1 - seq_tokens_mask).T > 0
+        src = src.T
         src = self.encoder(src) * math.sqrt(self.ninp)
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_key_padding_mask=seq_tokens_mask)
