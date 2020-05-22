@@ -7,6 +7,7 @@ from rtp_transformer.utils import generate_tree_relative_movements
 
 from .encoder_base import EncoderBase
 from .relative_multihead_attention import RelativeMultiheadSelfAttention
+from .positional_encoder import PositionalEncoder
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 
@@ -30,13 +31,13 @@ class TreeTransformerEncoderLayer(TransformerEncoderLayer):
     """
 
     def __init__(
-        self,
-        d_model,
-        nhead,
-        dim_feedforward=2048,
-        dropout=0.1,
-        activation="relu",
-        num_rpr_embeddings=None,
+            self,
+            d_model,
+            nhead,
+            dim_feedforward=2048,
+            dropout=0.1,
+            activation="relu",
+            num_rpr_embeddings=None,
     ):
         super().__init__(d_model, nhead, dim_feedforward, dropout, activation)
         self.self_attn = RelativeMultiheadSelfAttention(
@@ -51,7 +52,7 @@ class TreeTransformerEncoderLayer(TransformerEncoderLayer):
         )
 
     def forward(
-        self, src, src_mask=None, src_key_padding_mask=None, relative_distances=None
+            self, src, src_mask=None, src_key_padding_mask=None, relative_distances=None
     ):
         # type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor
         r"""Pass the input through the encoder layer.
@@ -100,12 +101,12 @@ class TreeTransformerEncoder(TransformerEncoder):
         self.clamping_distance = clamping_distance
 
     def forward(
-        self,
-        src,
-        mask=None,
-        src_key_padding_mask=None,
-        src_descendants=None,
-        src_nonterminal_mask=None,
+            self,
+            src,
+            mask=None,
+            src_key_padding_mask=None,
+            src_descendants=None,
+            src_nonterminal_mask=None,
     ):
         # type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor
         r"""Pass the input through the encoder layers in turn.
@@ -118,7 +119,7 @@ class TreeTransformerEncoder(TransformerEncoder):
         """
         output = src
 
-        #TODO check this if vocab changes
+        # TODO check this if vocab changes
         incidences = node_incidence_matrix(
             src_descendants,
             pad_idx=0,
@@ -147,17 +148,18 @@ class TreeTransformerEncoder(TransformerEncoder):
 
 class TreeAttentionEncoder(EncoderBase):
     def __init__(
-        self,
-        ntoken,
-        ninp,
-        nhead,
-        nhid,
-        nlayers,
-        dropout,
-        vocab_count_threshold,
-        use_bpe,
-        vocab_pct_bpe,
-        clamping_distance,
+            self,
+            ntoken,
+            ninp,
+            nhead,
+            nhid,
+            nlayers,
+            dropout,
+            vocab_count_threshold,
+            use_bpe,
+            vocab_pct_bpe,
+            clamping_distance,
+            use_sinusoidal_positional_embeddings: bool
     ):
         super().__init__(ntoken, vocab_count_threshold, use_bpe, vocab_pct_bpe)
         self.src_mask = None
@@ -171,28 +173,34 @@ class TreeAttentionEncoder(EncoderBase):
         self.transformer_encoder = TreeTransformerEncoder(encoder_layers, nlayers, clamping_distance=clamping_distance)
         self.encoder = nn.Embedding(ntoken, ninp)
         self.ninp = ninp
-        self.init_weights()
 
-    def _generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = (
-            mask.float()
-            .masked_fill(mask == 0, float("-inf"))
-            .masked_fill(mask == 1, float(0.0))
-        )
-        return mask
+        self.pos_encoder = PositionalEncoder(ninp, dropout) if use_sinusoidal_positional_embeddings else None
+
+        self.scale = math.sqrt(self.ninp)
+        self.init_weights()
 
     def init_weights(self):
         initrange = 0.1
         self.encoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, seq_tokens_mask, seq_len, src_descendants):
-        seq_tokens_mask = seq_tokens_mask == 0 #[B,N]
-        src = src.T #[N,B]
-        src = self.encoder(src) * math.sqrt(self.ninp) #[N,B,D]
+
+        seq_tokens_mask = (seq_tokens_mask == 0)  # BoolTensor [B, N]
+        src = src.T  # [B, N] -> [N, B]
+
+        # embed
+        src = self.encoder(src)   # [N, B, D]
+
+        # scale by sqrt(d)
+        src *= self.scale
+
+        # maybe embed sinusoidal positions
+        if self.pos_encoder is not None:
+            src = self.pos_encoder(src)
+
         output = self.transformer_encoder(
             src, src_key_padding_mask=seq_tokens_mask, src_descendants=src_descendants
-        ) #[N,B,D]
-        seq_token_embeddings_sum = output.sum(dim=0) #[N,D]
-        seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1) #[N,1]
+        )  # [N,B,D]
+        seq_token_embeddings_sum = output.sum(dim=0)  # [N,D]
+        seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)  # [N,1]
         return seq_token_embeddings_sum / seq_lengths

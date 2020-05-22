@@ -79,3 +79,6 @@ self_attention_nlayers:
 clamping_distance:
   desc:
   value: 3
+tree_transformer_use_positional_embeddings:
+  desc: "Use sinusoidal positional embeddings a long with relative MHA"
+  value: False
