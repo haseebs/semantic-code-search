@@ -66,12 +66,28 @@ class ModelBase(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         code_embs, query_embs = self.forward(batch)
-        _, mrr, similarity_scores, ranks = self.get_eval_metrics(code_embs, query_embs)
-        self.make_examples(batch, similarity_scores, ranks)
-        return {"mrr": mrr}
+        return {"batch": batch, "code_embs": code_embs, "query_embs": query_embs}
 
     def test_epoch_end(self, out):
-        avg_mrr = torch.stack([x["mrr"] for x in out]).mean()
+        sz0 = len(out)
+        sz1 = out[0]['code_embs'].shape[0]
+        all_code_embs = torch.stack([x["code_embs"] for x in out]).view(sz0*sz1,sz1)
+        all_query_embs = torch.stack([x["query_embs"] for x in out]).view(sz0*sz1,sz1)
+
+        code_embs_batched = sliced(all_code_embs, 1000)
+        query_embs_batched = sliced(all_query_embs, 1000)
+        all_mrr, all_similarity_scores, all_ranks = [], [], []
+        for code_embs, query_embs in zip(code_embs_batched, query_embs_batched):
+            if code_embs.shape[0] < 1000:
+                break
+            _, mrr, similarity_scores, ranks = self.get_eval_metrics(code_embs.to('cpu'), query_embs.to('cpu'))
+            all_mrr.append(mrr)
+            all_similarity_scores.append(similarity_scores)
+            all_ranks.append(ranks)
+
+        #self.make_examples(batch, similarity_scores, ranks)
+
+        avg_mrr = torch.stack(all_mrr).mean()
         log_dict = {"test_mrr": avg_mrr}
         wandb.run.summary["test_mrr"] = avg_mrr.item()  # shouldnt have to do this
         return {"test_mrr": avg_mrr, "progress_bar": log_dict, "log": log_dict}
