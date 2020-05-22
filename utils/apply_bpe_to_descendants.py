@@ -47,8 +47,8 @@ def apply_bpe_to_descendants(bpe_tokens, descendants: Iterable[int]) -> List[int
     def _add(node_descendants, is_new_node: bool):
         nonlocal stack_open_ancestors, stack_open_descendants, bpe_token_idx
 
-        if bpe_token_idx >= len(bpe_descendants):
-            return
+#        if bpe_token_idx >= len(bpe_descendants):
+#            return
 
         bpe_descendants[bpe_token_idx] = node_descendants
 
@@ -73,15 +73,22 @@ def apply_bpe_to_descendants(bpe_tokens, descendants: Iterable[int]) -> List[int
 
         # increment bpe counter
         bpe_token_idx += 1
+        if bpe_token_idx >= len(bpe_tokens):
+            bpe_descendants[stack_open_ancestors] - stack_open_descendants
+            return True
+        return False
 
     # walk through the original_tokens (and keep a matching index for the bpe tokens)
     for original_idx, original_descendants in enumerate(descendants):
-        if bpe_token_idx >= len(bpe_tokens):
-            break
+#        if bpe_token_idx >= len(bpe_tokens):
+#            from IPython import embed; embed()
+#            break
         current_token = bpe_tokens[bpe_token_idx]
 
         # the start of x bpe tokens, which previously were a single token
         if current_token == "__sow":
+            if original_descendants != 0:
+                from IPython import embed; embed()
             assert (
                 original_descendants == 0
             ), "trying to bpe'ize a token with descendants"
@@ -90,17 +97,24 @@ def apply_bpe_to_descendants(bpe_tokens, descendants: Iterable[int]) -> List[int
             # of its parents by 1)
             while current_token != "__eow":
                 # TODO skipping truncated bpe tokens here currently
-                _add(node_descendants=0, is_new_node=True)
-                if bpe_token_idx + 1 >= len(bpe_tokens):
-                    current_token = "__eow"
-                    break
+                is_done = _add(node_descendants=0, is_new_node=True)
+                if is_done:
+                    assert bpe_descendants[0] < len(bpe_descendants)
+                    return bpe_descendants
+#                if bpe_token_idx + 1 >= len(bpe_tokens):
+#                    bpe_descendants[stack_open_ancestors] - stack_open_descendants
+#                    current_token = "__eow"
+#                    break
                 current_token = bpe_tokens[
                     bpe_token_idx
                 ]  # bpe_token_idx is updated inside _add
 
         # _eow is the only "known" token (replaces) the original token),
         # thus we can add it as any other token.
-        _add(original_descendants, is_new_node=False)
+        is_done = _add(original_descendants, is_new_node=False)
+        if is_done:
+            assert bpe_descendants[0] < len(bpe_descendants)
+            return bpe_descendants
 
         assert len(stack_open_ancestors) == len(stack_open_descendants)
 

@@ -45,18 +45,20 @@ def convert_and_pad_tree_sequence(
                 tokens_with_bpe.append(token_vocab.inverse_word_vocab[i])
             else:
                 tokens_with_bpe.append([token_vocab.inverse_bpe_vocab[i], "@@"])
-        c=0
-        inside_bpe=False
-        for idx, token_id in enumerate(token_ids):
-            if token_id == token_vocab.bpe_vocab[token_vocab.SOW]:
-                inside_bpe = True
-            elif token_id == token_vocab.bpe_vocab[token_vocab.EOW]:
-                inside_bpe = False
-            #print('ye-',token_id)
-            if not inside_bpe:
-                #print(token_sequence[c])
-                assert(tree_sequence[c] == 0, 'Split tokens shouldnt have children')
-                c+=1
+        #c=0
+        #inside_bpe=False
+        #for idx, token_id in enumerate(token_ids):
+        #    if token_id == token_vocab.bpe_vocab[token_vocab.SOW]:
+        #        inside_bpe = True
+        #    elif token_id == token_vocab.bpe_vocab[token_vocab.EOW]:
+        #        inside_bpe = False
+        #    #print('ye-',token_id)
+        #    if not inside_bpe:
+        #        #print(token_sequence[c])
+        #        if (token_descendants[c] == 0):
+        #            from IPython import embed; embed()
+        #        assert(token_descendants[c] == 0, 'Split tokens shouldnt have children')
+        #        c+=1
 
 
         tokens_with_bpe = [t if isinstance(t, str) else t[0] for t in tokens_with_bpe]

@@ -22,14 +22,16 @@ class EncoderBase(nn.Module):
         self.vocabulary = None
 
     def update_tokens_from_sample(self, sample_tokens: List[str]) -> None:
+
         self.token_counter.update(sample_tokens)
 
     def build_vocabulary(self) -> None:
         if self.vocabulary != None:
             return
         if self.use_bpe:
+            required_tokens = [t for t in self.token_counter if t.startswith('<[') and t.endswith(']>')]
             self.vocabulary = BpeVocabulary(
-                vocab_size=self.vocab_size, pct_bpe=self.vocab_pct_bpe,
+                vocab_size=self.vocab_size, pct_bpe=self.vocab_pct_bpe, required_tokens=required_tokens
             )
             self.vocabulary.fit(self.token_counter)
         else:
