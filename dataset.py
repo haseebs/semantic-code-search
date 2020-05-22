@@ -51,7 +51,7 @@ class CSNDataset(Dataset):
 
             enc_query, enc_query_mask = convert_and_pad_token_sequence(
                 query_encoder.vocabulary,
-                [t.lower() for t in sample["docstring_tokens"]],
+                [t.lower() for t in sample[self.hypers["key_docstring_tokens"]]],
                 self.hypers["query_max_num_tokens"],
             )
 
