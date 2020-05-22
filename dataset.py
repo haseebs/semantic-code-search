@@ -49,12 +49,13 @@ class CSNDataset(Dataset):
     ) -> None:
         # TODO may need to move to encoder class to handle encoders that come with their own tokenizers
         count_empty_code = 0
+        count_empty_docstring = 0
         for idx, sample in enumerate(self.original_data):
 
             enc_query, enc_query_mask = convert_and_pad_token_sequence(
                 query_encoder.vocabulary,
-                [t.lower() for t in sample["docstring_tokens"]],
-                self.hparams["query_max_num_tokens"],
+                [t.lower() for t in sample[self.hypers["key_docstring_tokens"]]],
+                self.hypers["query_max_num_tokens"],
             )
 
             if self.hparams["code_encoder_type"] == "tree_attention_encoder":
@@ -78,10 +79,12 @@ class CSNDataset(Dataset):
             enc_query_length = int(np.sum(enc_query_mask))
             enc_code_length = int(np.sum(enc_code_mask))
             # TODO what to do about empty stuff
-            if not (enc_code_length > 0):
+            if enc_code_length == 0:
                 count_empty_code += 1
                 continue
-            assert enc_query_length > 0  # and enc_code_length > 0
+            if enc_query_length == 0:  # and enc_code_length > 0
+                count_empty_docstring += 1
+                continue
 
             encoded_data_item = {
                 "original_data_idx": idx,
@@ -95,7 +98,12 @@ class CSNDataset(Dataset):
             if self.hparams["code_encoder_type"] == "tree_attention_encoder":
                 encoded_data_item["code_ast_descendants"] = code_ast_descendants
             self.encoded_data.append(encoded_data_item)
-        print("Samples rejected due to no AST built: ", count_empty_code)
+        print(
+            "Samples rejected due to no AST built: ",
+            count_empty_code,
+            "; empty docstrings:",
+            count_empty_docstring,
+        )
         if self.data_split in ["valid", "test"]:
             random.shuffle(self.encoded_data)
 

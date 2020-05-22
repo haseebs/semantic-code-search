@@ -7,6 +7,7 @@ from rtp_transformer.utils import generate_tree_relative_movements
 
 from .encoder_base import EncoderBase
 from .relative_multihead_attention import RelativeMultiheadSelfAttention
+from .positional_encoder import PositionalEncoder
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 
@@ -156,6 +157,7 @@ class TreeAttentionEncoder(EncoderBase):
         use_bpe,
         vocab_pct_bpe,
         clamping_distance,
+        use_sinusoidal_positional_embeddings: bool,
     ):
         super().__init__(ntoken, vocab_count_threshold, use_bpe, vocab_pct_bpe)
         self.src_mask = None
@@ -171,25 +173,35 @@ class TreeAttentionEncoder(EncoderBase):
         )
         self.encoder = nn.Embedding(ntoken, ninp)
         self.ninp = ninp
-        self.init_weights()
 
-    def _generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = (
-            mask.float()
-            .masked_fill(mask == 0, float("-inf"))
-            .masked_fill(mask == 1, float(0.0))
+        self.pos_encoder = (
+            PositionalEncoder(ninp, dropout)
+            if use_sinusoidal_positional_embeddings
+            else None
         )
-        return mask
+
+        self.scale = math.sqrt(self.ninp)
+        self.init_weights()
 
     def init_weights(self):
         initrange = 0.1
         self.encoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, seq_tokens_mask, seq_len, src_descendants):
-        seq_tokens_mask = seq_tokens_mask == 0  # [B,N]
-        src = src.T  # [N,B]
-        src = self.encoder(src) * math.sqrt(self.ninp)  # [N,B,D]
+
+        seq_tokens_mask = seq_tokens_mask == 0  # BoolTensor [B, N]
+        src = src.T  # [B, N] -> [N, B]
+
+        # embed
+        src = self.encoder(src)  # [N, B, D]
+
+        # scale by sqrt(d)
+        src *= self.scale
+
+        # maybe embed sinusoidal positions
+        if self.pos_encoder is not None:
+            src = self.pos_encoder(src)
+
         output = self.transformer_encoder(
             src, src_key_padding_mask=seq_tokens_mask, src_descendants=src_descendants
         )  # [N,B,D]

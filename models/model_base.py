@@ -206,7 +206,7 @@ class ModelBase(pl.LightningModule):
             else:
                 self.code_encoder.update_tokens_from_sample(sample["code_tokens"])
             self.query_encoder.update_tokens_from_sample(
-                [t.lower() for t in sample["docstring_tokens"]]
+                [t.lower() for t in sample[self.hypers["key_docstring_tokens"]]]
             )
         self.code_encoder.build_vocabulary()
         self.query_encoder.build_vocabulary()

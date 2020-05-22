@@ -42,6 +42,9 @@ class EncoderFactory:
                 use_bpe=self.hypers["use_bpe"],
                 vocab_pct_bpe=self.hypers["vocab_pct_bpe"],
                 clamping_distance=self.hypers["clamping_distance"],
+                use_sinusoidal_positional_embeddings=self.hypers[
+                    "tree_transformer_use_positional_embeddings"
+                ],
             )
         else:
             print(f"Encoder: {encoder_type}z is not implemented!")
