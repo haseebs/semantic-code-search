@@ -1,9 +1,12 @@
+seed:
+  value: 0
+  desc: 
 model_type:
   desc:
-  value: tree_transformer_model
+  value: transformer_model
 code_encoder_type:
   desc:
-  value: "tree_attention_encoder"
+  value: "self_attention_encoder"
 query_encoder_type:
   desc:
   value: "self_attention_encoder"
@@ -21,7 +24,7 @@ learning_rate:
   value: 0.001
 batch_size:
   desc:
-  value: 100
+  value: 128
 loss:
   desc:
   value: "cosine"

@@ -1,6 +1,7 @@
 import random
 import wandb
 import torch
+import numpy as np
 import torch.nn as nn
 import pytorch_lightning as pl
 from pytorch_metric_learning import losses
@@ -26,6 +27,11 @@ class ModelBase(pl.LightningModule):
         self.train_dataset = train_dataset
         self.valid_dataset = valid_dataset
         self.test_dataset = test_dataset
+
+        torch.manual_seed(self.hypers["seed"])
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        np.random.seed(self.hypers["seed"])
 
     def forward(self, batch):
         code_embs = self.code_encoder(
