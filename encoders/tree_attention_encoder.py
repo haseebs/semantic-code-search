@@ -118,11 +118,9 @@ class TreeTransformerEncoder(TransformerEncoder):
         """
         output = src
 
-        #TODO check this if vocab changes
+        # TODO check this if vocab changes
         incidences = node_incidence_matrix(
-            src_descendants,
-            pad_idx=0,
-            pad_mask=src_key_padding_mask,
+            src_descendants, pad_idx=0, pad_mask=src_key_padding_mask,
         )
         relative_distances = generate_tree_relative_movements(
             node_incidences=incidences,
@@ -168,7 +166,9 @@ class TreeAttentionEncoder(EncoderBase):
             dropout,
             num_rpr_embeddings=2 * ((clamping_distance + 1) ** 2),
         )
-        self.transformer_encoder = TreeTransformerEncoder(encoder_layers, nlayers, clamping_distance=clamping_distance)
+        self.transformer_encoder = TreeTransformerEncoder(
+            encoder_layers, nlayers, clamping_distance=clamping_distance
+        )
         self.encoder = nn.Embedding(ntoken, ninp)
         self.ninp = ninp
         self.init_weights()
@@ -187,12 +187,12 @@ class TreeAttentionEncoder(EncoderBase):
         self.encoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, seq_tokens_mask, seq_len, src_descendants):
-        seq_tokens_mask = seq_tokens_mask == 0 #[B,N]
-        src = src.T #[N,B]
-        src = self.encoder(src) * math.sqrt(self.ninp) #[N,B,D]
+        seq_tokens_mask = seq_tokens_mask == 0  # [B,N]
+        src = src.T  # [N,B]
+        src = self.encoder(src) * math.sqrt(self.ninp)  # [N,B,D]
         output = self.transformer_encoder(
             src, src_key_padding_mask=seq_tokens_mask, src_descendants=src_descendants
-        ) #[N,B,D]
-        seq_token_embeddings_sum = output.sum(dim=0) #[N,D]
-        seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1) #[N,1]
+        )  # [N,B,D]
+        seq_token_embeddings_sum = output.sum(dim=0)  # [N,D]
+        seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)  # [N,1]
         return seq_token_embeddings_sum / seq_lengths

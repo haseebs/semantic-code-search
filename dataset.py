@@ -1,6 +1,7 @@
 import os
 import gzip
 import json
+import random
 import numpy as np
 from typing import List, Dict, Any, Iterable
 from torch.utils.data import Dataset
@@ -12,12 +13,13 @@ from utils.utils import convert_and_pad_tree_sequence
 
 class CSNDataset(Dataset):
     def __init__(
-        self, hypers: Dict[str, Any], keep_keys: set(), data_split: str = "train"
+        self, hparams: Dict[str, Any], keep_keys: set(), data_split: str = "train"
     ):
-        self.hypers = hypers
+        self.hparams = hparams
         self.keep_keys = keep_keys
         self.original_data = []
         self.encoded_data = []
+        self.data_split = data_split
         self.read_data(data_split)
 
     def __len__(self):
@@ -33,7 +35,7 @@ class CSNDataset(Dataset):
 
     def read_data(self, data_split: str = "train") -> None:
         # data_dirs = open("data_dirs.txt", "rt", encoding="utf-8")
-        paths = [os.path.join(path, data_split) for path in self.hypers["data_dirs"]]
+        paths = [os.path.join(path, data_split) for path in self.hparams["data_dirs"]]
         for path in paths:
             data_files = sorted(os.listdir(path))
             for data_file in data_files:
@@ -52,10 +54,10 @@ class CSNDataset(Dataset):
             enc_query, enc_query_mask = convert_and_pad_token_sequence(
                 query_encoder.vocabulary,
                 [t.lower() for t in sample["docstring_tokens"]],
-                self.hypers["query_max_num_tokens"],
+                self.hparams["query_max_num_tokens"],
             )
 
-            if self.hypers["code_encoder_type"] == "tree_attention_encoder":
+            if self.hparams["code_encoder_type"] == "tree_attention_encoder":
                 (
                     enc_code,
                     enc_code_mask,
@@ -64,13 +66,13 @@ class CSNDataset(Dataset):
                     code_encoder.vocabulary,
                     sample["code_ast_tokens"],
                     sample["code_ast_descendants"],
-                    self.hypers["code_max_num_tokens"],
+                    self.hparams["code_max_num_tokens"],
                 )
             else:
                 enc_code, enc_code_mask = convert_and_pad_token_sequence(
                     code_encoder.vocabulary,
                     sample["code_tokens"],
-                    self.hypers["code_max_num_tokens"],
+                    self.hparams["code_max_num_tokens"],
                 )
 
             enc_query_length = int(np.sum(enc_query_mask))
@@ -90,10 +92,12 @@ class CSNDataset(Dataset):
                 "encoded_code_mask": enc_code_mask,
                 "encoded_code_length": enc_code_length,
             }
-            if self.hypers["code_encoder_type"] == "tree_attention_encoder":
+            if self.hparams["code_encoder_type"] == "tree_attention_encoder":
                 encoded_data_item["code_ast_descendants"] = code_ast_descendants
             self.encoded_data.append(encoded_data_item)
         print("Samples rejected due to no AST built: ", count_empty_code)
+        if self.data_split in ["valid", "test"]:
+            random.shuffle(self.encoded_data)
 
 
 if __name__ == "__main__":

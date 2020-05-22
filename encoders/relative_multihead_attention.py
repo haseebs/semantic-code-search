@@ -433,7 +433,9 @@ class RelativeMultiheadSelfAttention(MultiheadAttention):
                 assert key_padding_mask.size(0) == bsz
                 assert key_padding_mask.size(1) == src_len
             except:
-                from IPython import embed; embed()
+                from IPython import embed
+
+                embed()
 
         if self.add_zero_attn:
             assert v is not None

@@ -53,7 +53,7 @@ class SelfAttentionEncoder(EncoderBase):
         #    mask = self._generate_square_subsequent_mask(len(src)).to(device)
         #    self.src_mask = mask
 
-        #seq_tokens_mask = (1 - seq_tokens_mask).T > 0
+        # seq_tokens_mask = (1 - seq_tokens_mask).T > 0
         seq_tokens_mask = seq_tokens_mask == 0
         src = src.T
         src = self.encoder(src) * math.sqrt(self.ninp)

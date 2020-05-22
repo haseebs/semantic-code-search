@@ -38,14 +38,18 @@ def convert_and_pad_tree_sequence(
         token_mask = np.int_(token_ids > 0)
 
         # apply bpe to parent array
-        bpe_descendants = apply_bpe_to_descendants(token_ids, token_descendants,
-                                                   sow_idx=token_vocab.bpe_vocab[token_vocab.SOW],
-                                                   eow_idx=token_vocab.bpe_vocab[token_vocab.EOW])
-        #adding pad index to base
+        bpe_descendants = apply_bpe_to_descendants(
+            token_ids,
+            token_descendants,
+            sow_idx=token_vocab.bpe_vocab[token_vocab.SOW],
+            eow_idx=token_vocab.bpe_vocab[token_vocab.EOW],
+        )
+        # adding pad index to base
         bpe_descendants[token_mask == 1] += token_vocab.word_vocab[token_vocab.PAD] + 1
         return token_ids, token_mask, bpe_descendants
     else:
         raise NotImplementedError
+
 
 def convert_and_pad_token_sequence(
     token_vocab: Union[Vocabulary, BpeVocabulary],
@@ -72,7 +76,7 @@ def convert_and_pad_token_sequence(
                 token_vocab.transform([token_sequence], fixed_length=output_tensor_size)
             )[0]
         )
-        #TODO
+        # TODO
         token_mask = np.int_(token_ids > 0)
 
         return token_ids, token_mask

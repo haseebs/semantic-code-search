@@ -3,6 +3,7 @@ import wandb
 import torch
 import numpy as np
 import torch.nn as nn
+from tqdm import tqdm
 import pytorch_lightning as pl
 from pytorch_metric_learning import losses
 
@@ -17,21 +18,17 @@ from encoders.encoder_factory import EncoderFactory
 class ModelBase(pl.LightningModule):
     def __init__(
         self,
-        hypers: Dict[str, Any],
+        hparams: Dict[str, Any],
         train_dataset: Dataset,
         valid_dataset: Dataset,
         test_dataset: Dataset,
     ):
         super().__init__()
-        self.hypers = hypers
+        self.hparams = hparams
         self.train_dataset = train_dataset
         self.valid_dataset = valid_dataset
         self.test_dataset = test_dataset
-
-        torch.manual_seed(self.hypers["seed"])
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-        np.random.seed(self.hypers["seed"])
+        self.get_encoders()
 
     def forward(self, batch):
         code_embs = self.code_encoder(
@@ -59,6 +56,7 @@ class ModelBase(pl.LightningModule):
         return {"loss": loss, "progress_bar": tqdm_dict, "log": log_dict}
 
     def validation_step(self, batch, batch_idx):
+        # TODO randomize
         code_embs, query_embs = self.forward(batch)
         loss, mrr, _, _ = self.get_eval_metrics(code_embs, query_embs)
         return {"loss": loss, "mrr": mrr}
@@ -76,23 +74,29 @@ class ModelBase(pl.LightningModule):
         return {"batch": batch, "code_embs": code_embs, "query_embs": query_embs}
 
     def test_epoch_end(self, out):
+        # TODO randomize
         sz0 = len(out)
-        sz1 = out[0]['code_embs'].shape[0]
-        all_code_embs = torch.stack([x["code_embs"] for x in out]).view(sz0*sz1,sz1)
-        all_query_embs = torch.stack([x["query_embs"] for x in out]).view(sz0*sz1,sz1)
+        sz1 = out[0]["code_embs"].shape[0]
+        all_code_embs = torch.stack([x["code_embs"] for x in out]).view(sz0 * sz1, sz1)
+        all_query_embs = torch.stack([x["query_embs"] for x in out]).view(
+            sz0 * sz1, sz1
+        )
 
         code_embs_batched = sliced(all_code_embs, 1000)
         query_embs_batched = sliced(all_query_embs, 1000)
         all_mrr, all_similarity_scores, all_ranks = [], [], []
-        for code_embs, query_embs in zip(code_embs_batched, query_embs_batched):
+        for code_embs, query_embs in tqdm(zip(code_embs_batched, query_embs_batched)):
             if code_embs.shape[0] < 1000:
                 break
-            _, mrr, similarity_scores, ranks = self.get_eval_metrics(code_embs.to('cpu'), query_embs.to('cpu'))
+            _, mrr, similarity_scores, ranks = self.get_eval_metrics(
+                code_embs.to(self.hparams["test_device"]),
+                query_embs.to(self.hparams["test_device"]),
+            )
             all_mrr.append(mrr)
             all_similarity_scores.append(similarity_scores)
             all_ranks.append(ranks)
 
-        #self.make_examples(batch, similarity_scores, ranks)
+        # self.make_examples(batch, similarity_scores, ranks)
 
         avg_mrr = torch.stack(all_mrr).mean()
         log_dict = {"test_mrr": avg_mrr}
@@ -108,7 +112,7 @@ class ModelBase(pl.LightningModule):
         # )
         # per_sample_loss = torch.max(
         #    torch.tensor(0.0).cuda(),
-        #    self.hypers["margin"]
+        #    self.hparams["margin"]
         #    - similarity_scores.diagonal()
         #    + torch.max(F.relu(similarity_scores + neg_matrix.cuda()), dim=-1)[0],
         # )
@@ -117,7 +121,7 @@ class ModelBase(pl.LightningModule):
         labels = torch.arange(1, query_embs.shape[0] + 1)
         labels = torch.cat([labels, labels])
         loss_func = losses.TripletMarginLoss(
-            margin=self.hypers["margin"], triplets_per_anchor="all"
+            margin=self.hparams["margin"], triplets_per_anchor="all"
         )
         total_loss = loss_func(embs, labels)
 
@@ -129,11 +133,11 @@ class ModelBase(pl.LightningModule):
         return total_loss, mrr, similarity_scores, ranks
 
     def make_examples(self, batch, similarity_scores, ranks):
-        # max_examples = 250 if 250 < self.hypers["batch_size"] else self.hypers["batch_size"]
+        # max_examples = 250 if 250 < self.hparams["batch_size"] else self.hparams["batch_size"]
         max_examples = 100
         language = self.test_dataset.original_data[0]["language"]
         predictions = torch.argmax(similarity_scores, dim=1)
-        r = random.sample(range(self.hypers["batch_size"]), max_examples)
+        r = random.sample(range(self.hparams["batch_size"]), max_examples)
 
         selected_ranks = ranks[r]
         selected_predictions = predictions[r]
@@ -174,29 +178,30 @@ class ModelBase(pl.LightningModule):
         )
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.hypers["learning_rate"])
+        return torch.optim.Adam(self.parameters(), lr=self.hparams["learning_rate"])
 
-    def init_encoders(self):
-        encoder_factory = EncoderFactory(self.hypers)
-        if self.hypers["encoder_sharing_mode"] == "per_code_language":
+    def get_encoders(self):
+        encoder_factory = EncoderFactory(self.hparams)
+        if self.hparams["encoder_sharing_mode"] == "per_code_language":
             raise NotImplementedError
-        elif self.hypers["encoder_sharing_mode"] == "per_input_source":
+        elif self.hparams["encoder_sharing_mode"] == "per_input_source":
             self.code_encoder = encoder_factory.get_encoder(
-                self.hypers["code_encoder_type"]
+                self.hparams["code_encoder_type"]
             )
             self.query_encoder = encoder_factory.get_encoder(
-                self.hypers["query_encoder_type"]
+                self.hparams["query_encoder_type"]
             )
-        elif self.hypers["encoder_sharing_mode"] == "all":
+        elif self.hparams["encoder_sharing_mode"] == "all":
             self.code_encoder = encoder_factory.get_encoder(
-                self.hypers["code_encoder_type"]
+                self.hparams["code_encoder_type"]
             )
             self.query_encoder = self.code_encoder
 
+    def init_encoders(self):
         # TODO cleanup this mess
         print("Building vocabulary...")
         for sample in self.train_dataset.original_data:
-            if self.hypers["code_encoder_type"] == "tree_attention_encoder":
+            if self.hparams["code_encoder_type"] == "tree_attention_encoder":
                 self.code_encoder.update_tokens_from_sample(sample["code_ast_tokens"])
             else:
                 self.code_encoder.update_tokens_from_sample(sample["code_tokens"])
@@ -228,7 +233,7 @@ class ModelBase(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(
             dataset=self.train_dataset,
-            batch_size=self.hypers["batch_size"],
+            batch_size=self.hparams["batch_size"],
             shuffle=True,
             drop_last=True,
         )
@@ -236,16 +241,16 @@ class ModelBase(pl.LightningModule):
     def val_dataloader(self):
         return DataLoader(
             dataset=self.valid_dataset,
-            batch_size=self.hypers["batch_size"],
-            shuffle=True,
+            batch_size=self.hparams["batch_size"],
+            shuffle=False,
             drop_last=True,
         )
 
     def test_dataloader(self):
         return DataLoader(
             dataset=self.test_dataset,
-            batch_size=self.hypers["batch_size"],
-            shuffle=True,
+            batch_size=self.hparams["batch_size"],
+            shuffle=False,
             drop_last=True,
         )
 

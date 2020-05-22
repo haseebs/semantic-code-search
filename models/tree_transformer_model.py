@@ -15,13 +15,13 @@ from .transformer_model import TransformerModel
 class TreeTransformerModel(TransformerModel):
     def __init__(
         self,
-        hypers: Dict[str, Any],
+        hparams: Dict[str, Any],
         train_dataset: Dataset,
         valid_dataset: Dataset,
         test_dataset: Dataset,
     ):
         super(TreeTransformerModel, self).__init__(
-            hypers, train_dataset, valid_dataset, test_dataset
+            hparams, train_dataset, valid_dataset, test_dataset
         )
 
     def forward(self, batch):

@@ -34,9 +34,9 @@ def remove_csn_bpe(tokens_with_bpe):
     return tokens
 
 
-def apply_bpe_to_descendants(bpe_token_ids, descendants: Iterable[int],
-                             sow_idx: int,
-                             eow_idx: int) -> List[int]:
+def apply_bpe_to_descendants(
+    bpe_token_ids, descendants: Iterable[int], sow_idx: int, eow_idx: int
+) -> List[int]:
     """ not very performant, but it works
 
     ."""
