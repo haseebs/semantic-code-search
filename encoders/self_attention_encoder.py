@@ -53,7 +53,6 @@ class SelfAttentionEncoder(EncoderBase):
         #    mask = self._generate_square_subsequent_mask(len(src)).to(device)
         #    self.src_mask = mask
 
-        from IPython import embed; embed()
         #seq_tokens_mask = (1 - seq_tokens_mask).T > 0
         seq_tokens_mask = seq_tokens_mask == 0
         src = src.T
@@ -61,6 +60,6 @@ class SelfAttentionEncoder(EncoderBase):
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_key_padding_mask=seq_tokens_mask)
         # output = self.decoder(output)
-        seq_token_embeddings_sum = output.sum(dim=1)
+        seq_token_embeddings_sum = output.sum(dim=0)
         seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)
         return seq_token_embeddings_sum / seq_lengths
