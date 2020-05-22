@@ -66,7 +66,7 @@ class TreeTransformerEncoderLayer(TransformerEncoderLayer):
             query=src,
             key=src,
             value=src,
-            key_padding_mask=src_key_padding_mask.T,
+            key_padding_mask=src_key_padding_mask,
             attn_mask=src_mask,
             relative_distances=relative_distances,
             tree_attn_mask=None,
@@ -119,17 +119,16 @@ class TreeTransformerEncoder(TransformerEncoder):
         output = src
 
         #TODO check this if vocab changes
-        pad_mask = src_key_padding_mask.T #[B,S]
         incidences = node_incidence_matrix(
             src_descendants,
             pad_idx=0,
-            pad_mask=pad_mask,
+            pad_mask=src_key_padding_mask,
         )
         relative_distances = generate_tree_relative_movements(
             node_incidences=incidences,
             pad_idx=0,
             max_relative_distance=self.clamping_distance,
-            pad_mask=pad_mask,
+            pad_mask=src_key_padding_mask,
         )
 
         for mod in self.layers:
@@ -188,7 +187,7 @@ class TreeAttentionEncoder(EncoderBase):
         self.encoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, seq_tokens_mask, seq_len, src_descendants):
-        seq_tokens_mask = (1 - seq_tokens_mask).T > 0
+        seq_tokens_mask = seq_tokens_mask == 0 #[B,N]
         src = src.T #[N,B]
         src = self.encoder(src) * math.sqrt(self.ninp) #[N,B,D]
         output = self.transformer_encoder(
