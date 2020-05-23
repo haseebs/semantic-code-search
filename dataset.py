@@ -54,8 +54,8 @@ class CSNDataset(Dataset):
 
             enc_query, enc_query_mask = convert_and_pad_token_sequence(
                 query_encoder.vocabulary,
-                [t.lower() for t in sample[self.hparam["key_docstring_tokens"]]],
-                self.hparam["query_max_num_tokens"],
+                [t.lower() for t in sample[self.hparams["key_docstring_tokens"]]],
+                self.hparams["query_max_num_tokens"],
             )
 
             if self.hparams["code_encoder_type"] == "tree_attention_encoder":
