@@ -53,9 +53,6 @@ def run():
         )
     )
 
-    from IPython import embed
-
-    embed()
     seed_everything(wandb.config["seed"])
 
     train_dataset = CSNDataset(
