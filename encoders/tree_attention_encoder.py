@@ -171,7 +171,7 @@ class TreeAttentionEncoder(EncoderBase):
         self.transformer_encoder = TreeTransformerEncoder(
             encoder_layers, nlayers, clamping_distance=clamping_distance
         )
-        self.encoder = nn.Embedding(ntoken, ninp)
+        self.encoder = nn.Embedding(ntoken, ninp, padding_idx=0)
         self.ninp = ninp
 
         self.pos_encoder = (
