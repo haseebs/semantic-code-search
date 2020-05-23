@@ -47,10 +47,15 @@ def run():
         run_id = args.load.split("/")[1].split("-")[2]
     logger = loggers.WandbLogger(
         experiment=wandb.init(
-            project="semantic-code-search", resume=run_id, config=cfg_file
+            project="semantic-code-search",
+            resume=run_id,
+            config={k: v["value"] for k, v in cfg_file.items()},
         )
     )
 
+    from IPython import embed
+
+    embed()
     seed_everything(wandb.config["seed"])
 
     train_dataset = CSNDataset(
