@@ -26,7 +26,6 @@ def run():
     parser.add_argument(
         "-l", "--load", action="store", type=str, help="path to checkpoint"
     )
-
     parser.add_argument(
         "-c",
         "--config",
