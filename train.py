@@ -1,5 +1,6 @@
 import os
 import sys
+import yaml
 
 sys.path.append("/home/haseebs/workspace/CSN/semantic_code_search")
 
@@ -25,17 +26,34 @@ def run():
     parser.add_argument(
         "-l", "--load", action="store", type=str, help="path to checkpoint"
     )
+
+    parser.add_argument(
+        "-c",
+        "--config",
+        action="store",
+        default="config-default.yaml",
+        type=str,
+        help="path to config",
+    )
     args = parser.parse_args()
     if (not args.train and not args.evaluate) or (args.evaluate and not args.load):
         print("wrong args passed")
         exit(0)
 
+    print(f"Loading config parameters from {args.config}")
+    cfg_file = yaml.safe_load(open(args.config))
+
     run_id = None
     if args.load:
         run_id = args.load.split("/")[1].split("-")[2]
     logger = loggers.WandbLogger(
-        experiment=wandb.init(project="semantic-code-search", resume=run_id)
+        experiment=wandb.init(
+            project="semantic-code-search", resume=run_id, config=cfg_file
+        )
     )
+    from IPython import embed
+
+    embed()
     seed_everything(wandb.config["seed"])
 
     train_dataset = CSNDataset(
