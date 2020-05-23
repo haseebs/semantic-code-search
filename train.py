@@ -26,7 +26,6 @@ def run():
     parser.add_argument(
         "-l", "--load", action="store", type=str, help="path to checkpoint"
     )
-
     parser.add_argument(
         "-c",
         "--config",
@@ -51,9 +50,7 @@ def run():
             project="semantic-code-search", resume=run_id, config=cfg_file
         )
     )
-    from IPython import embed
 
-    embed()
     seed_everything(wandb.config["seed"])
 
     train_dataset = CSNDataset(
