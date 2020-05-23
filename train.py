@@ -51,9 +51,7 @@ def run():
             project="semantic-code-search", resume=run_id, config=cfg_file
         )
     )
-    from IPython import embed
 
-    embed()
     seed_everything(wandb.config["seed"])
 
     train_dataset = CSNDataset(
