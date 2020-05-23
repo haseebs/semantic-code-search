@@ -10,8 +10,8 @@ class NBowModel(ModelBase):
 
     def init_encoders(self):
         self.code_encoder = self.encoder_factory.get_encoder(
-            self.hypers["code_encoder_type"]
+            self.hparams["code_encoder_type"]
         )
         self.query_encoder = self.encoder_factory.get_encoder(
-            self.hypers["query_encoder_type"]
+            self.hparams["query_encoder_type"]
         )
