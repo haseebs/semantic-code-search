@@ -92,3 +92,6 @@ tree_transformer_use_positional_embeddings:
 tree_transformer_use_level_positional_embeddings:
   desc: "Use level positional embeddings together with relative MHA"
   value: True
+tree_transformer_ancestor_prediction:
+  desc: "Predict ancestors on code encoder outputs. Define the number of sampled ancestors here. 0 deactivates"
+  value: 0

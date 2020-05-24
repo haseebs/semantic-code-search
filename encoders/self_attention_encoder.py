@@ -31,11 +31,13 @@ class SelfAttentionEncoder(EncoderBase):
         # self.decoder = nn.Linear(ninp, ntoken)
         self.dropout = nn.Dropout(p=dropout)
 
-        self.init_weights()
-
-    def init_weights(self):
-        initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
+        self.apply(init_params)
+    #
+    #     self.init_weights()
+    #
+    # def init_weights(self):
+    #     initrange = 0.1
+    #     self.encoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, seq_tokens_mask, seq_len):
         # if self.src_mask is None or self.src_mask.size(0) != len(src):
@@ -56,3 +58,20 @@ class SelfAttentionEncoder(EncoderBase):
         seq_token_embeddings_sum = output.sum(dim=0)
         seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)
         return seq_token_embeddings_sum / seq_lengths
+
+
+
+def init_params(module):
+    """
+    Initialize the weights.
+    This overrides the default initializations depending on the specified arguments.
+    """
+
+    if isinstance(module, nn.Linear):
+        module.weight.data.normal_(mean=0.0, std=0.02)
+        if module.bias is not None:
+            module.bias.data.zero_()
+    if isinstance(module, nn.Embedding):
+        module.weight.data.normal_(mean=0.0, std=0.02)
+        if module.padding_idx is not None:
+            module.weight.data[module.padding_idx].zero_()

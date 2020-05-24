@@ -10,6 +10,8 @@ from encoders.encoder_base import EncoderBase
 from utils.utils import convert_and_pad_token_sequence
 from utils.utils import convert_and_pad_tree_sequence
 
+from astlib.tensor_utils.analyze import sample_ancestors
+
 
 class CSNDataset(Dataset):
     def __init__(
@@ -26,7 +28,19 @@ class CSNDataset(Dataset):
         return len(self.encoded_data)
 
     def __getitem__(self, idx):
-        return self.encoded_data[idx]
+        sample = self.encoded_data[idx]
+
+        if self.hparams["tree_transformer_ancestor_prediction"]:
+            num_ancestors = self.hparams["tree_transformer_ancestor_prediction"]
+            assert "code_ast_descendants" in sample, "can't do ancestor prediction without descendants"
+            ancestor_target, ancestor_source_pairs = sample_ancestors(
+                num_samples=num_ancestors, descendants=sample["code_ast_descendants"]
+            )  # [N] and [N, 2]
+            sample["ancestor_target"] = ancestor_target
+            sample["ancestor_source_node1"] = ancestor_source_pairs[:, 0]  # separate to support automatic collater
+            sample["ancestor_source_node2"] = ancestor_source_pairs[:, 1]
+
+        return sample
 
     def read_jsonl(self, path: str) -> Iterable[Dict[str, Any]]:
         jsonl_file = gzip.open(path, mode="rt", encoding="utf-8")

@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from astlib.tensor_utils.analyze import node_incidence_matrix
 from rtp_transformer.utils import generate_tree_relative_movements
+from typing import Tuple
 
 from .encoder_base import EncoderBase
 from .relative_multihead_attention import RelativeMultiheadSelfAttention
@@ -12,24 +13,6 @@ from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 
 class TreeTransformerEncoderLayer(TransformerEncoderLayer):
-    r"""TransformerEncoderLayer is made up of self-attn and feedforward network.
-    This standard encoder layer is based on the paper "Attention Is All You Need".
-    Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez,
-    Lukasz Kaiser, and Illia Polosukhin. 2017. Attention is all you need. In Advances in
-    Neural Information Processing Systems, pages 6000-6010. Users may modify or implement
-    in a different way during application.
-    Args:
-        d_model: the number of expected features in the input (required).
-        nhead: the number of heads in the multiheadattention models (required).
-        dim_feedforward: the dimension of the feedforward network model (default=2048).
-        dropout: the dropout value (default=0.1).
-        activation: the activation function of intermediate layer, relu or gelu (default=relu).
-    Examples::
-        >>> encoder_layer = nn.TransformerEncoderLayer(d_model=512, nhead=8)
-        >>> src = torch.rand(10, 32, 512)
-        >>> out = encoder_layer(src)
-    """
-
     def __init__(
         self,
         d_model,
@@ -102,9 +85,6 @@ class TreeTransformerEncoder(TransformerEncoder):
         """
         output = src
 
-
-
-
         for mod in self.layers:
             output = mod(
                 output,
@@ -117,6 +97,22 @@ class TreeTransformerEncoder(TransformerEncoder):
             output = self.norm(output)
 
         return output
+
+
+def init_params(module):
+    """
+    Initialize the weights.
+    This overrides the default initializations depending on the specified arguments.
+    """
+
+    if isinstance(module, nn.Linear):
+        module.weight.data.normal_(mean=0.0, std=0.02)
+        if module.bias is not None:
+            module.bias.data.zero_()
+    if isinstance(module, nn.Embedding):
+        module.weight.data.normal_(mean=0.0, std=0.02)
+        if module.padding_idx is not None:
+            module.weight.data[module.padding_idx].zero_()
 
 
 class TreeAttentionEncoder(EncoderBase):
@@ -134,6 +130,7 @@ class TreeAttentionEncoder(EncoderBase):
         clamping_distance,
         use_sinusoidal_positional_embeddings: bool,
         use_level_positional_embeddings: bool,
+        ancestor_prediction: bool
     ):
         super().__init__(ntoken, vocab_count_threshold, use_bpe, vocab_pct_bpe)
         self.src_mask = None
@@ -162,11 +159,10 @@ class TreeAttentionEncoder(EncoderBase):
         self.clamping_distance = clamping_distance
 
         self.scale = math.sqrt(self.ninp)
-        self.init_weights()
 
-    def init_weights(self):
-        initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
+        self.ancestor_prediction_head = LCAPredictionHead(embed_dim=ninp,) if ancestor_prediction else None
+
+        self.apply(init_params)
 
     def forward(self, src, seq_tokens_mask, seq_len, src_descendants):
 
@@ -202,7 +198,79 @@ class TreeAttentionEncoder(EncoderBase):
 
         output = self.transformer_encoder(
             src_embed, src_key_padding_mask=seq_tokens_mask, relative_distances=relative_distances
-        )  # [N,B,D]
-        seq_token_embeddings_sum = output.sum(dim=0)  # [N,D]
-        seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)  # [N,1]
-        return seq_token_embeddings_sum / seq_lengths
+        )  # [N, B, D]
+
+        # compute code embeddings
+        seq_token_embeddings_sum = output.sum(dim=0)  # [B, D]
+        seq_lengths = seq_len.to(seq_token_embeddings_sum)[:, None]  # [B, 1]
+        return seq_token_embeddings_sum / seq_lengths, output
+
+    def predict_ancestors(self, features, node_pairs):
+        # compute ancestor predictions
+        ancestor_logits =  self.ancestor_prediction_head(
+                features=features,
+                pair_indices=node_pairs
+            )
+        return ancestor_logits
+
+
+class Linear(nn.Module):
+    def __init__(self, embed_dim, output_dim, activation_fn="relu"):
+        super().__init__()
+        self.dense = nn.Linear(embed_dim, output_dim)
+        self.activation_fn = nn.GELU() if activation_fn == "gelu" else nn.ReLU()
+
+    def forward(self, features, **kwargs):
+        # Features = B x T x H
+        x = self.dense(features)
+        x = self.activation_fn(x)
+
+        return x
+
+
+class LCAPredictionHead(nn.Module):
+    """Head for lca prediction based on the tokens embeddings."""
+
+    def __init__(self, embed_dim, activation_fn):
+        super().__init__()
+
+        self.linear = Linear(
+            embed_dim=embed_dim * 2,
+            output_dim=embed_dim,
+            activation_fn=activation_fn
+        )
+
+    @staticmethod
+    def gather_feature_pairs(features: torch.Tensor, pair_indices: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        # features: B x T x H
+        # pair_indices: B x V x 2
+        features_1 = torch.gather(
+            features,
+            1,
+            pair_indices[:, :, 0, None].expand(-1, -1, features.size(-1))
+        )  # B x V x H
+        features_2 = torch.gather(
+            features,
+            1,
+            pair_indices[:, :, 1, None].expand(-1, -1, features.size(-1))
+        )  # B x V x H
+
+        return features_1, features_2
+
+    def forward(self, features: torch.Tensor, pair_indices: torch.Tensor, **kwargs):
+        """
+        # features: N x B x H  as returned from the encoder
+        # pair_indices: B x V x 2  (V=number of ancestor predictions)
+
+        :return:
+        """
+        features = features.transpose(0, 1)  # [B, N, H]
+
+        encoded1, encoded2 = self.gather_feature_pairs(features, pair_indices)  # both B x V x H
+        encoded = torch.cat((encoded1, encoded2), dim=-1)  # B x V x 2H
+
+        # project
+        x = self.linear(encoded)  # B x V x H
+        x = torch.bmm(x, features.transpose(1, 2))  # B, V, T
+        return x
+

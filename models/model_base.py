@@ -236,6 +236,7 @@ class ModelBase(pl.LightningModule):
             batch_size=self.hparams["batch_size"],
             shuffle=True,
             drop_last=True,
+            num_workers=2
         )
 
     def val_dataloader(self):
@@ -244,6 +245,8 @@ class ModelBase(pl.LightningModule):
             batch_size=self.hparams["batch_size"],
             shuffle=False,
             drop_last=True,
+            num_workers=1
+
         )
 
     def test_dataloader(self):
