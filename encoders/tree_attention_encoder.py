@@ -160,7 +160,10 @@ class TreeAttentionEncoder(EncoderBase):
 
         self.scale = math.sqrt(self.ninp)
 
-        self.ancestor_prediction_head = LCAPredictionHead(embed_dim=ninp,) if ancestor_prediction else None
+        self.ancestor_prediction_head = LCAPredictionHead(
+            embed_dim=ninp,
+            activation_fn="relu"
+        ) if ancestor_prediction else None
 
         self.apply(init_params)
 
