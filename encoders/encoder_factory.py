@@ -48,6 +48,7 @@ class EncoderFactory:
                 use_level_positional_embeddings=self.hypers[
                     "tree_transformer_use_level_positional_embeddings"
                 ],
+                ancestor_prediction=(self.hypers["tree_transformer_ancestor_prediction"] > 0)
             )
         else:
             print(f"Encoder: {encoder_type}z is not implemented!")
