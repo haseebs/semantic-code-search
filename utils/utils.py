@@ -35,7 +35,7 @@ def convert_and_pad_tree_sequence(
                 token_vocab.transform([token_sequence], fixed_length=output_tensor_size)
             )[0]
         )
-        token_mask = np.int_(token_ids > 0)
+        token_mask = np.int_(token_ids > 0)  # fixme why is this int?
 
         # apply bpe to parent array
         bpe_descendants = apply_bpe_to_descendants(

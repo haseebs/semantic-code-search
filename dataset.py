@@ -35,8 +35,11 @@ class CSNDataset(Dataset):
         if self.hparams["tree_transformer_ancestor_prediction"]:
             num_ancestors = self.hparams["tree_transformer_ancestor_prediction"]
             assert "code_ast_descendants" in sample, "can't do ancestor prediction without descendants"
+
+            descendants = sample["code_ast_descendants"][sample["encoded_code_mask"] == 1]
+
             ancestor_target, ancestor_source_pairs = sample_ancestors(
-                num_samples=num_ancestors, descendants=torch.from_numpy(sample["code_ast_descendants"])
+                num_samples=num_ancestors, descendants=torch.from_numpy(descendants)
             )  # [N] and [N, 2]
             sample["ancestor_target"] = ancestor_target
             sample["ancestor_source_node1"] = ancestor_source_pairs[:, 0]  # separate to support automatic collater
