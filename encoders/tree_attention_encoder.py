@@ -159,6 +159,7 @@ class TreeAttentionEncoder(EncoderBase):
             self.level_pos_encoder = LevelPositionalEmbedding(embedding_dim=ninp)
 
         self.dropout = nn.Dropout(p=dropout)
+        self.clamping_distance = clamping_distance
 
         self.scale = math.sqrt(self.ninp)
         self.init_weights()
