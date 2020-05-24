@@ -26,7 +26,7 @@ class SelfAttentionEncoder(EncoderBase):
         self.pos_encoder = PositionalEncoder(ninp)
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder = nn.Embedding(ntoken, ninp, padding_idx=0)
+        self.encoder = nn.Embedding(ntoken, ninp)
         self.ninp = ninp
         # self.decoder = nn.Linear(ninp, ntoken)
         self.dropout = nn.Dropout(p=dropout)
