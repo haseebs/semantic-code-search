@@ -83,9 +83,12 @@ self_attention_nhid:
 self_attention_nlayers:
   desc:
   value: 3
-  clamping_distance:
+clamping_distance:
   desc:
   value: 3
 tree_transformer_use_positional_embeddings:
   desc: "Use sinusoidal positional embeddings together with relative MHA"
+  value: False
+tree_transformer_use_level_positional_embeddings:
+  desc: "Use level positional embeddings together with relative MHA"
   value: True

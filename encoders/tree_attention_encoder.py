@@ -7,7 +7,7 @@ from rtp_transformer.utils import generate_tree_relative_movements
 
 from .encoder_base import EncoderBase
 from .relative_multihead_attention import RelativeMultiheadSelfAttention
-from .positional_encoder import PositionalEncoder
+from .positional_encoder import PositionalEncoder, LevelPositionalEmbedding
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 
@@ -158,6 +158,7 @@ class TreeAttentionEncoder(EncoderBase):
         vocab_pct_bpe,
         clamping_distance,
         use_sinusoidal_positional_embeddings: bool,
+        use_level_positional_embeddings: bool,
     ):
         super().__init__(ntoken, vocab_count_threshold, use_bpe, vocab_pct_bpe)
         self.src_mask = None
@@ -174,11 +175,13 @@ class TreeAttentionEncoder(EncoderBase):
         self.encoder = nn.Embedding(ntoken, ninp, padding_idx=0)
         self.ninp = ninp
 
-        self.pos_encoder = (
-            PositionalEncoder(ninp, dropout)
-            if use_sinusoidal_positional_embeddings
-            else None
-        )
+        self.pos_encoder = None
+        if use_sinusoidal_positional_embeddings:
+            self.pos_encoder = PositionalEncoder(ninp)
+        elif use_level_positional_embeddings:
+            self.pos_encoder = LevelPositionalEmbedding(embedding_dim=ninp)
+
+        self.dropout = nn.Dropout(p=dropout)
 
         self.scale = math.sqrt(self.ninp)
         self.init_weights()
@@ -193,17 +196,20 @@ class TreeAttentionEncoder(EncoderBase):
         src = src.T  # [B, N] -> [N, B]
 
         # embed
-        src = self.encoder(src)  # [N, B, D]
+        src_embed = self.encoder(src)  # [N, B, D]
 
         # scale by sqrt(d)
-        src *= self.scale
+        src_embed *= self.scale
 
-        # maybe embed sinusoidal positions
+        # maybe embed positions
         if self.pos_encoder is not None:
-            src = self.pos_encoder(src)
+            src_embed = self.pos_encoder(src_embed)
+
+        # dropout
+        src_embed = self.dropout(src_embed)
 
         output = self.transformer_encoder(
-            src, src_key_padding_mask=seq_tokens_mask, src_descendants=src_descendants
+            src_embed, src_key_padding_mask=seq_tokens_mask, src_descendants=src_descendants
         )  # [N,B,D]
         seq_token_embeddings_sum = output.sum(dim=0)  # [N,D]
         seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)  # [N,1]
