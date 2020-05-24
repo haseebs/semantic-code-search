@@ -4,6 +4,8 @@ import json
 import random
 import numpy as np
 from typing import List, Dict, Any, Iterable
+
+import torch
 from torch.utils.data import Dataset
 
 from encoders.encoder_base import EncoderBase
@@ -34,7 +36,7 @@ class CSNDataset(Dataset):
             num_ancestors = self.hparams["tree_transformer_ancestor_prediction"]
             assert "code_ast_descendants" in sample, "can't do ancestor prediction without descendants"
             ancestor_target, ancestor_source_pairs = sample_ancestors(
-                num_samples=num_ancestors, descendants=sample["code_ast_descendants"]
+                num_samples=num_ancestors, descendants=torch.from_numpy(sample["code_ast_descendants"])
             )  # [N] and [N, 2]
             sample["ancestor_target"] = ancestor_target
             sample["ancestor_source_node1"] = ancestor_source_pairs[:, 0]  # separate to support automatic collater

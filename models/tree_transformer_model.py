@@ -83,6 +83,36 @@ class TreeTransformerModel(TransformerModel):
 
         return {"loss": loss, "progress_bar": tqdm_dict, "log": log_dict}
 
+    def validation_step(self, batch, batch_idx):
+        code_embs, query_embs, ancestor_logits = self.forward(batch)
+        loss, mrr, _, _ = self.get_eval_metrics(code_embs, query_embs)
+        log_dict = {"loss": loss, "mrr": mrr}
+
+        if ancestor_logits is not None:
+            ancestor_loss = self.compute_ancestor_loss(
+                ancestor_logits=ancestor_logits,
+                ancestor_target=batch["ancestor_target"],
+            )
+            # todo make configurable
+            loss += 0.3 * ancestor_loss
+            log_dict["loss"] = loss
+            log_dict["ancestor_loss"] = ancestor_loss
+
+        return log_dict
+
+    def validation_epoch_end(self, out):
+        # TODO mean of means != total mean
+        avg_loss = torch.stack([x["loss"] for x in out]).mean()
+        log_dict = {
+            "val_loss": avg_loss,
+            "val_mrr": torch.stack([x["mrr"] for x in out]).mean()
+        }
+
+        if "ancestor_loss" in out:
+            log_dict["val_ancestor_loss"] = torch.stack([x["ancestor_loss"] for x in out]).mean()
+
+        return {"val_loss": avg_loss, "progress_bar": log_dict, "log": log_dict}
+
     @staticmethod
     def compute_ancestor_loss(ancestor_logits, ancestor_target):
         lprobs = F.log_softmax(ancestor_logits, dim=-1)
