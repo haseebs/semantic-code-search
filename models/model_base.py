@@ -74,12 +74,10 @@ class ModelBase(pl.LightningModule):
         return {"batch": batch, "code_embs": code_embs, "query_embs": query_embs}
 
     def test_epoch_end(self, out):
-        # TODO randomize
-        sz0 = len(out)
-        sz1 = out[0]["code_embs"].shape[0]
-        all_code_embs = torch.stack([x["code_embs"] for x in out]).view(sz0 * sz1, sz1)
+        sz = out[0]["code_embs"].shape[1]
+        all_code_embs = torch.stack([x["code_embs"] for x in out]).view(-1, sz)
         all_query_embs = torch.stack([x["query_embs"] for x in out]).view(
-            sz0 * sz1, sz1
+            -1, sz
         )
 
         code_embs_batched = sliced(all_code_embs, 1000)
