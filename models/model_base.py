@@ -48,6 +48,7 @@ class ModelBase(pl.LightningModule):
         return {"code_embs": code_embs, "query_embs": query_embs}
 
     def training_end(self, out):
+
         loss, mrr, _, _ = self.get_eval_metrics(out["code_embs"], out["query_embs"])
 
         tqdm_dict = {"train_mrr": mrr}
