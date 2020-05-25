@@ -124,7 +124,7 @@ class TreeTransformerModel(TransformerModel):
             lprobs,
             target,
             ignore_index=-1,
-            reduction='sum'
+            reduction='mean'
         )
 
         return loss

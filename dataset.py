@@ -45,6 +45,7 @@ class CSNDataset(Dataset):
             sample["ancestor_source_node1"] = ancestor_source_pairs[:, 0]  # separate to support automatic collater
             sample["ancestor_source_node2"] = ancestor_source_pairs[:, 1]
 
+            # from IPython import embed; embed()
         return sample
 
     def read_jsonl(self, path: str) -> Iterable[Dict[str, Any]]:
