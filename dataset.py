@@ -36,7 +36,7 @@ class CSNDataset(Dataset):
             num_ancestors = self.hparams["tree_transformer_ancestor_prediction"]
             assert "code_ast_descendants" in sample, "can't do ancestor prediction without descendants"
 
-            descendants = sample["code_ast_descendants"][sample["encoded_code_mask"] == 1]
+            descendants = sample["code_ast_descendants"][sample["encoded_code_mask"] == 1] - 1  # remove pad increment
 
             ancestor_target, ancestor_source_pairs = sample_ancestors(
                 num_samples=num_ancestors, descendants=torch.from_numpy(descendants)
