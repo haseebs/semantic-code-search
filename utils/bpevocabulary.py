@@ -15,10 +15,10 @@ except ImportError:
     pass
 
 
-DEFAULT_EOW = "__eow"
-DEFAULT_SOW = "__sow"
-DEFAULT_UNK = "__unk"
-DEFAULT_PAD = "__pad"
+DEFAULT_EOW = "[__eow]"
+DEFAULT_SOW = "[__sow]"
+DEFAULT_UNK = "[__unk]"
+DEFAULT_PAD = "[__pad]"
 
 
 class BpeVocabulary(typing.Sized):
