@@ -15,7 +15,7 @@ class NbowEncoder(EncoderBase):
         vocab_pct_bpe: float,
     ):
         super().__init__(vocab_size, vocab_count_threshold, use_bpe, vocab_pct_bpe)
-        self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
         self.dropout = nn.Dropout(p=dropout)
         nn.init.xavier_uniform_(self.embeddings.weight)
 

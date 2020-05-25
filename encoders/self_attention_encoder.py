@@ -23,12 +23,13 @@ class SelfAttentionEncoder(EncoderBase):
     ):
         super().__init__(ntoken, vocab_count_threshold, use_bpe, vocab_pct_bpe)
         self.src_mask = None
-        self.pos_encoder = PositionalEncoder(ninp, dropout)
+        self.pos_encoder = PositionalEncoder(ninp)
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.encoder = nn.Embedding(ntoken, ninp)
         self.ninp = ninp
         # self.decoder = nn.Linear(ninp, ntoken)
+        self.dropout = nn.Dropout(p=dropout)
 
         self.init_weights()
 
@@ -44,10 +45,13 @@ class SelfAttentionEncoder(EncoderBase):
 
         # seq_tokens_mask = (1 - seq_tokens_mask).T > 0
         seq_tokens_mask = seq_tokens_mask == 0
+
         src = src.T
-        src = self.encoder(src) * math.sqrt(self.ninp)
-        src = self.pos_encoder(src)
-        output = self.transformer_encoder(src, src_key_padding_mask=seq_tokens_mask)
+        src_embed = self.encoder(src) * math.sqrt(self.ninp)
+        src_embed = self.pos_encoder(src_embed)
+        src_embed = self.dropout(src_embed)
+
+        output = self.transformer_encoder(src_embed, src_key_padding_mask=seq_tokens_mask)
         # output = self.decoder(output)
         seq_token_embeddings_sum = output.sum(dim=0)
         seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)

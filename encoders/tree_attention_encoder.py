@@ -7,7 +7,7 @@ from rtp_transformer.utils import generate_tree_relative_movements
 
 from .encoder_base import EncoderBase
 from .relative_multihead_attention import RelativeMultiheadSelfAttention
-from .positional_encoder import PositionalEncoder
+from .positional_encoder import PositionalEncoder, LevelPositionalEmbedding
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 
 
@@ -83,29 +83,12 @@ class TreeTransformerEncoderLayer(TransformerEncoderLayer):
 
 
 class TreeTransformerEncoder(TransformerEncoder):
-    r"""TransformerEncoder is a stack of N encoder layers
-    Args:
-        encoder_layer: an instance of the TransformerEncoderLayer() class (required).
-        num_layers: the number of sub-encoder-layers in the encoder (required).
-        norm: the layer normalization component (optional).
-    Examples::
-        >>> encoder_layer = nn.TransformerEncoderLayer(d_model=512, nhead=8)
-        >>> transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
-        >>> src = torch.rand(10, 32, 512)
-        >>> out = transformer_encoder(src)
-    """
-    _constants_ = ["norm"]
-
-    def __init__(self, encoder_layer, num_layers, norm=None, clamping_distance=3):
-        super().__init__(encoder_layer, num_layers, norm)
-        self.clamping_distance = clamping_distance
-
     def forward(
         self,
         src,
         mask=None,
         src_key_padding_mask=None,
-        src_descendants=None,
+        relative_distances=None,
         src_nonterminal_mask=None,
     ):
         # type: (Tensor, Optional[Tensor], Optional[Tensor]) -> Tensor
@@ -119,16 +102,8 @@ class TreeTransformerEncoder(TransformerEncoder):
         """
         output = src
 
-        # TODO check this if vocab changes
-        incidences = node_incidence_matrix(
-            src_descendants, pad_idx=0, pad_mask=src_key_padding_mask,
-        )
-        relative_distances = generate_tree_relative_movements(
-            node_incidences=incidences,
-            pad_idx=0,
-            max_relative_distance=self.clamping_distance,
-            pad_mask=src_key_padding_mask,
-        )
+
+
 
         for mod in self.layers:
             output = mod(
@@ -158,6 +133,7 @@ class TreeAttentionEncoder(EncoderBase):
         vocab_pct_bpe,
         clamping_distance,
         use_sinusoidal_positional_embeddings: bool,
+        use_level_positional_embeddings: bool,
     ):
         super().__init__(ntoken, vocab_count_threshold, use_bpe, vocab_pct_bpe)
         self.src_mask = None
@@ -169,16 +145,21 @@ class TreeAttentionEncoder(EncoderBase):
             num_rpr_embeddings=2 * ((clamping_distance + 1) ** 2),
         )
         self.transformer_encoder = TreeTransformerEncoder(
-            encoder_layers, nlayers, clamping_distance=clamping_distance
+            encoder_layers, nlayers
         )
-        self.encoder = nn.Embedding(ntoken, ninp)
+        self.encoder = nn.Embedding(ntoken, ninp, padding_idx=0)
         self.ninp = ninp
 
-        self.pos_encoder = (
-            PositionalEncoder(ninp, dropout)
-            if use_sinusoidal_positional_embeddings
-            else None
-        )
+        self.pos_encoder = None
+        if use_sinusoidal_positional_embeddings:
+            self.pos_encoder = PositionalEncoder(ninp)
+
+        self.level_pos_encoder = None
+        if use_level_positional_embeddings:
+            self.level_pos_encoder = LevelPositionalEmbedding(embedding_dim=ninp)
+
+        self.dropout = nn.Dropout(p=dropout)
+        self.clamping_distance = clamping_distance
 
         self.scale = math.sqrt(self.ninp)
         self.init_weights()
@@ -193,17 +174,34 @@ class TreeAttentionEncoder(EncoderBase):
         src = src.T  # [B, N] -> [N, B]
 
         # embed
-        src = self.encoder(src)  # [N, B, D]
+        src_embed = self.encoder(src)  # [N, B, D]
 
         # scale by sqrt(d)
-        src *= self.scale
+        src_embed *= self.scale
 
-        # maybe embed sinusoidal positions
+        # maybe embed positions
         if self.pos_encoder is not None:
-            src = self.pos_encoder(src)
+            src_embed = self.pos_encoder(src_embed)
+
+        # compute node incidences here         # TODO check this if vocab changes
+        incidences = node_incidence_matrix(
+            src_descendants, pad_idx=0, pad_mask=seq_tokens_mask,
+        )
+        relative_distances = generate_tree_relative_movements(
+            node_incidences=incidences,
+            pad_idx=0,
+            max_relative_distance=self.clamping_distance,
+            pad_mask=seq_tokens_mask,
+        )
+
+        if self.level_pos_encoder is not None:
+            src_embed = self.level_pos_encoder(src_embed, incidences)
+
+        # dropout
+        src_embed = self.dropout(src_embed)
 
         output = self.transformer_encoder(
-            src, src_key_padding_mask=seq_tokens_mask, src_descendants=src_descendants
+            src_embed, src_key_padding_mask=seq_tokens_mask, relative_distances=relative_distances
         )  # [N,B,D]
         seq_token_embeddings_sum = output.sum(dim=0)  # [N,D]
         seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)  # [N,1]
