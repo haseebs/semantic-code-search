@@ -13,10 +13,15 @@ from utils.utils import convert_and_pad_tree_sequence
 
 class CSNDataset(Dataset):
     def __init__(
-        self, hparams: Dict[str, Any], keep_keys: set(), data_split: str = "train"
+        self,
+        hparams: Dict[str, Any],
+        keep_keys: set(),
+        data_split: str = "train",
+        languages: List[str] = [],
     ):
         self.hparams = hparams
         self.keep_keys = keep_keys
+        self.languages = languages
         self.original_data = []
         self.encoded_data = []
         self.data_split = data_split
@@ -37,12 +42,16 @@ class CSNDataset(Dataset):
         # data_dirs = open("data_dirs.txt", "rt", encoding="utf-8")
         paths = [os.path.join(path, data_split) for path in self.hparams["data_dirs"]]
         for path in paths:
+            if not path.split("/")[-4] in self.languages:  # TODO fix hardcoded path idx
+                continue
             data_files = sorted(os.listdir(path))
             for data_file in data_files:
                 if data_file.endswith(".jsonl.gz"):
                     self.original_data.extend(
                         self.read_jsonl(path=os.path.join(path, data_file))
                     )
+                    # if data_split in ["train", "valid"]:
+                    #    break
 
     def encode_data(
         self, query_encoder: EncoderBase, code_encoder: EncoderBase
@@ -88,6 +97,7 @@ class CSNDataset(Dataset):
 
             encoded_data_item = {
                 "original_data_idx": idx,
+                "language": sample["language"],
                 "encoded_query": enc_query,
                 "encoded_query_mask": enc_query_mask,
                 "encoded_query_length": enc_query_length,

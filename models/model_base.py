@@ -7,7 +7,7 @@ from tqdm import tqdm
 import pytorch_lightning as pl
 from pytorch_metric_learning import losses
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from more_itertools import sliced
 from torch.utils.data import Dataset, DataLoader
 from torch.nn import functional as F
@@ -21,13 +21,13 @@ class ModelBase(pl.LightningModule):
         hparams: Dict[str, Any],
         train_dataset: Dataset,
         valid_dataset: Dataset,
-        test_dataset: Dataset,
+        test_datasets: List[Dataset],
     ):
         super().__init__()
         self.hparams = hparams
         self.train_dataset = train_dataset
         self.valid_dataset = valid_dataset
-        self.test_dataset = test_dataset
+        self.test_datasets = test_datasets
         self.get_encoders()
 
     def forward(self, batch):
@@ -69,37 +69,45 @@ class ModelBase(pl.LightningModule):
 
         return {"val_loss": avg_loss, "progress_bar": log_dict, "log": log_dict}
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch, batch_idx, dataloader_idx):
         code_embs, query_embs = self.forward(batch)
         return {"batch": batch, "code_embs": code_embs, "query_embs": query_embs}
 
     def test_epoch_end(self, out):
-        sz = out[0]["code_embs"].shape[1]
-        all_code_embs = torch.stack([x["code_embs"] for x in out]).view(-1, sz)
-        all_query_embs = torch.stack([x["query_embs"] for x in out]).view(
-            -1, sz
-        )
+        log_dict = {}
+        for idx, embeds in enumerate(out):
+            if idx == 0:
+                languages_used = "all"
+            else:
+                languages_used = self.hparams["languages"][idx - 1]
+            sz = embeds[0]["code_embs"].shape[1]
+            all_code_embs = torch.stack([x["code_embs"] for x in embeds]).view(-1, sz)
+            all_query_embs = torch.stack([x["query_embs"] for x in embeds]).view(-1, sz)
 
-        code_embs_batched = sliced(all_code_embs, 1000)
-        query_embs_batched = sliced(all_query_embs, 1000)
-        all_mrr, all_similarity_scores, all_ranks = [], [], []
-        for code_embs, query_embs in tqdm(zip(code_embs_batched, query_embs_batched)):
-            if code_embs.shape[0] < 1000:
-                break
-            _, mrr, similarity_scores, ranks = self.get_eval_metrics(
-                code_embs.to(self.hparams["test_device"]),
-                query_embs.to(self.hparams["test_device"]),
-            )
-            all_mrr.append(mrr)
-            all_similarity_scores.append(similarity_scores)
-            all_ranks.append(ranks)
+            code_embs_batched = sliced(all_code_embs, 1000)
+            query_embs_batched = sliced(all_query_embs, 1000)
+            all_mrr, all_similarity_scores, all_ranks = [], [], []
+            for code_embs, query_embs in tqdm(
+                zip(code_embs_batched, query_embs_batched)
+            ):
+                if code_embs.shape[0] < 1000:
+                    break
+                _, mrr, similarity_scores, ranks = self.get_eval_metrics(
+                    code_embs.to(self.hparams["test_device"]),
+                    query_embs.to(self.hparams["test_device"]),
+                )
+                all_mrr.append(mrr)
+                all_similarity_scores.append(similarity_scores)
+                all_ranks.append(ranks)
 
-        # self.make_examples(batch, similarity_scores, ranks)
+            # self.make_examples(batch, similarity_scores, ranks)
 
-        avg_mrr = torch.stack(all_mrr).mean()
-        log_dict = {"test_mrr": avg_mrr}
-        wandb.run.summary["test_mrr"] = avg_mrr.item()  # shouldnt have to do this
-        return {"test_mrr": avg_mrr, "progress_bar": log_dict, "log": log_dict}
+            avg_mrr = torch.stack(all_mrr).mean()
+            log_dict[f"test_mrr_{languages_used}"] = avg_mrr
+            wandb.run.summary[
+                f"test_mrr_{languages_used}"
+            ] = avg_mrr.item()  # shouldnt have to do this
+        return {"progress_bar": log_dict, "log": log_dict}
 
     def get_eval_metrics(self, code_embs: torch.tensor, query_embs: torch.tensor):
         query_norm = F.normalize(query_embs, dim=-1) + 1e-10
@@ -219,7 +227,8 @@ class ModelBase(pl.LightningModule):
         print("Tokenizing data...")
         self.train_dataset.encode_data(self.query_encoder, self.code_encoder)
         self.valid_dataset.encode_data(self.query_encoder, self.code_encoder)
-        self.test_dataset.encode_data(self.query_encoder, self.code_encoder)
+        for test_dataset in self.test_datasets:
+            test_dataset.encode_data(self.query_encoder, self.code_encoder)
 
         # free up memory
         self.train_dataset.original_data = []
@@ -245,12 +254,18 @@ class ModelBase(pl.LightningModule):
         )
 
     def test_dataloader(self):
-        return DataLoader(
-            dataset=self.test_dataset,
-            batch_size=self.hparams["batch_size"],
-            shuffle=False,
-            drop_last=True,
-        )
+        # shuffling done in dataset.py
+        data_loaders = []
+        for dataset in self.test_datasets:
+            data_loaders.append(
+                DataLoader(
+                    dataset=dataset,
+                    batch_size=self.hparams["batch_size"],
+                    shuffle=False,
+                    drop_last=True,
+                )
+            )
+        return data_loaders
 
 
 if __name__ == "__main__":

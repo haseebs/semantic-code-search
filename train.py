@@ -42,6 +42,9 @@ def run():
     print(f"Loading config parameters from {args.config}")
     cfg_file = yaml.safe_load(open(args.config))
 
+    languages = [k.split("/")[-3] for k in cfg_file["data_dirs"]["value"]]
+    cfg_file["languages"] = {"value": languages}
+    print(f"Training on languages: {languages}")
     run_id = None
     if args.load:
         run_id = args.load.split("/")[1].split("-")[2]
@@ -56,22 +59,41 @@ def run():
     seed_everything(wandb.config["seed"])
 
     train_dataset = CSNDataset(
-        hparams=wandb.config, keep_keys=wandb.config["keep_keys"], data_split="train"
+        hparams=wandb.config,
+        keep_keys=wandb.config["keep_keys"],
+        data_split="train",
+        languages=languages,
     )
     valid_dataset = CSNDataset(
-        hparams=wandb.config, keep_keys=wandb.config["keep_keys"], data_split="valid"
-    )
-    test_dataset = CSNDataset(
         hparams=wandb.config,
-        keep_keys=wandb.config["keep_keys_test"],
-        data_split="test",
+        keep_keys=wandb.config["keep_keys"],
+        data_split="valid",
+        languages=languages,
     )
+
+    test_datasets = [
+        CSNDataset(
+            hparams=wandb.config,
+            keep_keys=wandb.config["keep_keys_test"],
+            data_split="test",
+            languages=languages,
+        )
+    ]
+    for language in languages:
+        test_datasets.append(
+            CSNDataset(
+                hparams=wandb.config,
+                keep_keys=wandb.config["keep_keys_test"],
+                data_split="test",
+                languages=[language],
+            )
+        )
 
     model_factory = ModelFactory(
         {k: wandb.config.get(k) for k in wandb.config.keys()},
         train_dataset,
         valid_dataset,
-        test_dataset,
+        test_datasets,
     )
     model = model_factory.get_model(wandb.config["model_type"])
 
@@ -103,6 +125,7 @@ def run():
         deterministic=True,
         resume_from_checkpoint=args.load,
         # train_percent_check=0.01,
+        # val_percent_check=0.01,
         gpus=1,
     )
     # from IPython import embed; embed()
@@ -115,7 +138,7 @@ def run():
             args.load,
             train_dataset=train_dataset,
             valid_dataset=valid_dataset,
-            test_dataset=test_dataset,
+            test_datasets=test_datasets,
         )
 
     trainer.test(model)

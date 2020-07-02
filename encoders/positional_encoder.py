@@ -26,11 +26,7 @@ class PositionalEncoder(nn.Module):
 
 
 class LevelPositionalEmbedding(nn.Module):
-
-    def __init__(
-            self,
-            embedding_dim: int, num_embeddings: int = 200
-    ):
+    def __init__(self, embedding_dim: int, num_embeddings: int = 200):
         super().__init__()
 
         self.num_embeddings = num_embeddings

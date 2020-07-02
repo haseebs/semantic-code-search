@@ -102,9 +102,6 @@ class TreeTransformerEncoder(TransformerEncoder):
         """
         output = src
 
-
-
-
         for mod in self.layers:
             output = mod(
                 output,
@@ -144,9 +141,7 @@ class TreeAttentionEncoder(EncoderBase):
             dropout,
             num_rpr_embeddings=2 * ((clamping_distance + 1) ** 2),
         )
-        self.transformer_encoder = TreeTransformerEncoder(
-            encoder_layers, nlayers
-        )
+        self.transformer_encoder = TreeTransformerEncoder(encoder_layers, nlayers)
         self.encoder = nn.Embedding(ntoken, ninp, padding_idx=0)
         self.ninp = ninp
 
@@ -201,7 +196,9 @@ class TreeAttentionEncoder(EncoderBase):
         src_embed = self.dropout(src_embed)
 
         output = self.transformer_encoder(
-            src_embed, src_key_padding_mask=seq_tokens_mask, relative_distances=relative_distances
+            src_embed,
+            src_key_padding_mask=seq_tokens_mask,
+            relative_distances=relative_distances,
         )  # [N,B,D]
         seq_token_embeddings_sum = output.sum(dim=0)  # [N,D]
         seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)  # [N,1]

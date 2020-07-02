@@ -51,7 +51,9 @@ class SelfAttentionEncoder(EncoderBase):
         src_embed = self.pos_encoder(src_embed)
         src_embed = self.dropout(src_embed)
 
-        output = self.transformer_encoder(src_embed, src_key_padding_mask=seq_tokens_mask)
+        output = self.transformer_encoder(
+            src_embed, src_key_padding_mask=seq_tokens_mask
+        )
         # output = self.decoder(output)
         seq_token_embeddings_sum = output.sum(dim=0)
         seq_lengths = seq_len.to(dtype=torch.float32).unsqueeze(dim=-1)
