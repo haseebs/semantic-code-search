@@ -73,7 +73,7 @@ keep_keys_test:
           "code", "code_tokens", "code_ast_tokens", "code_ast_descendants"]
 data_dirs:
   desc:
-  value: ["../data/jsonl_with_ast/go","../data/jsonl_with_ast/java","../data/jsonl_with_ast/javascript","../data/jsonl_with_ast/php","../data/jsonl_with_ast/python", "../data/jsonl_with_ast/ruby", ]
+  value: ["../data/data_ast/ruby/final/jsonl", "../data/data_ast/go/final/jsonl"]
 self_attention_nheads:
   desc:
   value: 8
