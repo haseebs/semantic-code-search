@@ -42,7 +42,7 @@ def run():
     print(f"Loading config parameters from {args.config}")
     cfg_file = yaml.safe_load(open(args.config))
 
-    languages = [k.split("/")[-3] for k in cfg_file["data_dirs"]["value"]]
+    languages = [k.split("/")[-1] for k in cfg_file["data_dirs"]["value"]]
     cfg_file["languages"] = {"value": languages}
     print(f"Training on languages: {languages}")
     run_id = None

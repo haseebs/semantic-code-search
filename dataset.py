@@ -42,7 +42,7 @@ class CSNDataset(Dataset):
         # data_dirs = open("data_dirs.txt", "rt", encoding="utf-8")
         paths = [os.path.join(path, data_split) for path in self.hparams["data_dirs"]]
         for path in paths:
-            if not path.split("/")[-4] in self.languages:  # TODO fix hardcoded path idx
+            if not path.split("/")[-2] in self.languages:  # TODO fix hardcoded path idx
                 continue
             data_files = sorted(os.listdir(path))
             for data_file in data_files:
