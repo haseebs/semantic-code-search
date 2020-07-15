@@ -126,7 +126,8 @@ def run():
         resume_from_checkpoint=args.load,
         # train_percent_check=0.01,
         # val_percent_check=0.01,
-        gpus=1,
+        gpus=3,
+        distributed_backend='dp'
     )
     # from IPython import embed; embed()
 
