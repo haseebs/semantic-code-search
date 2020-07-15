@@ -8,6 +8,7 @@ from transformers import RobertaTokenizer, RobertaForMaskedLM
 
 class PretrainedRobertaEncoder(nn.Module):
     def __init__(self, embedding_dim: int):
+        super().__init__()
         self.tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
         self.model = RobertaForMaskedLM.from_pretrained("roberta-base")
         self.linear = torch.nn.Linear(

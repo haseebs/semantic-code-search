@@ -20,7 +20,7 @@ class PretrainedModel(ModelBase):
         valid_dataset: Dataset,
         test_dataset: Dataset,
     ):
-        super(TransformerModel, self).__init__(
+        super(PretrainedModel, self).__init__(
             hparams, train_dataset, valid_dataset, test_dataset
         )
 
@@ -53,23 +53,3 @@ class PretrainedModel(ModelBase):
             self.code_encoder.build_vocabulary()
         if self.hparams["query_encoder_type"] != "pretrained_roberta_encoder":
             self.query_encoder.build_vocabulary()
-
-    def prepare_data(self):
-        # do not prepare data again when testing
-        if len(self.train_dataset.original_data) == 0:
-            return
-
-        self.init_encoders()
-
-        print("Tokenizing data...")
-        self.train_dataset.encode_data(self.query_encoder, self.code_encoder)
-        self.valid_dataset.encode_data(self.query_encoder, self.code_encoder)
-        for test_dataset in self.test_datasets:
-            test_dataset.encode_data(self.query_encoder, self.code_encoder)
-
-        # free up memory
-        self.train_dataset.original_data = []
-        self.valid_dataset.original_data = []
-
-        # dirty hack to not let pytorch_lightning finalize the session before testing
-        self.logger.finalize = lambda *args: None
