@@ -12,7 +12,7 @@ class PretrainedRobertaEncoder(nn.Module):
         self.tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
         self.model = RobertaForMaskedLM.from_pretrained("roberta-base")
         self.linear = torch.nn.Linear(
-            model.base_model.embeddings.word_embeddings.weight.shape[1], 300
+            self.model.base_model.embeddings.word_embeddings.weight.shape[1], 300
         )
         self.init_weights()
 
