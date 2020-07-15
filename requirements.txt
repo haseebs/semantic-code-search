@@ -79,6 +79,7 @@ toolz==0.10.0
 torch==1.4.0
 torchvision==0.6.1
 tqdm==4.43.0
+transformers==3.0.2
 tree-sitter==0.1.1
 Unidecode==1.1.1
 urllib3==1.25.9

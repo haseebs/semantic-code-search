@@ -4,6 +4,7 @@ import json
 import random
 import numpy as np
 from typing import List, Dict, Any, Iterable
+from torch import nn
 from torch.utils.data import Dataset
 
 from encoders.encoder_base import EncoderBase
@@ -53,19 +54,29 @@ class CSNDataset(Dataset):
                     # if data_split in ["train", "valid"]:
                     #    break
 
-    def encode_data(
-        self, query_encoder: EncoderBase, code_encoder: EncoderBase
-    ) -> None:
+    def encode_data(self, query_encoder: nn.Module, code_encoder: nn.Module) -> None:
         # TODO may need to move to encoder class to handle encoders that come with their own tokenizers
         count_empty_code = 0
         count_empty_docstring = 0
         for idx, sample in enumerate(self.original_data):
 
-            enc_query, enc_query_mask = convert_and_pad_token_sequence(
-                query_encoder.vocabulary,
-                [t.lower() for t in sample[self.hparams["key_docstring_tokens"]]],
-                self.hparams["query_max_num_tokens"],
-            )
+            if self.hparams["query_encoder_type"] == "pretrained_roberta_encoder":
+                enc_query, enc_query_mask = query_encoder.tokenizer(
+                    [t.lower() for t in sample[self.hparams["key_docstring_tokens"]]],
+                    is_pretokenized=True,
+                    padding="max_length",
+                    truncation=True,
+                    max_length=self.hparams["query_max_num_tokens"],
+                ).values()
+            else:
+                enc_query, enc_query_mask = convert_and_pad_token_sequence(
+                    query_encoder.vocabulary,
+                    [t.lower() for t in sample[self.hparams["key_docstring_tokens"]]],
+                    self.hparams["query_max_num_tokens"],
+                )
+
+            if self.hparams["code_encoder_type"] == "pretrained_roberta_encoder":
+                raise NotImplementedError
 
             if self.hparams["code_encoder_type"] == "tree_attention_encoder":
                 (
