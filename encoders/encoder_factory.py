@@ -2,6 +2,7 @@ from typing import Dict, Any
 from .nbow_encoder import NbowEncoder
 from .self_attention_encoder import SelfAttentionEncoder
 from .tree_attention_encoder import TreeAttentionEncoder
+from .pretrained_roberta_encoder import PretrainedRobertaEncoder
 
 
 class EncoderFactory:
@@ -49,6 +50,8 @@ class EncoderFactory:
                     "tree_transformer_use_level_positional_embeddings"
                 ],
             )
+        elif encoder_type == "pretrained_roberta_encoder":
+            return PretrainedRobertaEncoder(embedding_dim=self.hypers["embedding_dim"])
         else:
             print(f"Encoder: {encoder_type}z is not implemented!")
             raise NotImplementedError

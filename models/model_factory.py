@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 from .model_base import ModelBase
 from .transformer_model import TransformerModel
 from .tree_transformer_model import TreeTransformerModel
+from .pretrained_model import PretrainedModel
 
 
 class ModelFactory:
@@ -29,6 +30,10 @@ class ModelFactory:
             )
         elif model_type == "tree_transformer_model":
             return TreeTransformerModel(
+                self.hparams, self.train_dataset, self.valid_dataset, self.test_dataset,
+            )
+        elif model_type == "pretrained_model":
+            return PretrainedModel(
                 self.hparams, self.train_dataset, self.valid_dataset, self.test_dataset,
             )
         else:
