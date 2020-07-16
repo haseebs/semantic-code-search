@@ -27,6 +27,7 @@ class PretrainedModel(ModelBase):
     def forward(self, batch):
         code_embs = self.code_encoder(
             src=batch["encoded_code"], seq_tokens_mask=batch["encoded_code_mask"],
+            seq_len=batch["encoded_code_length"]
         )
         query_embs = self.query_encoder(
             src=batch["encoded_query"], seq_tokens_mask=batch["encoded_query_mask"],

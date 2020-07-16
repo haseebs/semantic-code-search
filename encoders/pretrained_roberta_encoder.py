@@ -10,9 +10,9 @@ class PretrainedRobertaEncoder(nn.Module):
     def __init__(self, embedding_dim: int):
         super().__init__()
         self.tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
-        self.model = RobertaForMaskedLM.from_pretrained("roberta-base")
+        self.model = RobertaForMaskedLM.from_pretrained("roberta-base", output_hidden_states=True)
         self.linear = torch.nn.Linear(
-            self.model.base_model.embeddings.word_embeddings.weight.shape[1], 300
+            self.model.base_model.embeddings.word_embeddings.weight.shape[1], 128
         )
         self.init_weights()
 
@@ -21,7 +21,7 @@ class PretrainedRobertaEncoder(nn.Module):
         self.linear.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, seq_tokens_mask):
-        output = self.model(src, seq_tokens_mask, output_hidden_states=True)[1][
+        output = self.model(src, seq_tokens_mask)[1][
             0
         ]  # TODO make sure this is last hidden layer and not the first
         output = self.linear(output)
