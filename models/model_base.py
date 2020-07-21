@@ -56,9 +56,12 @@ class ModelBase(pl.LightningModule):
         return {"loss": loss, "progress_bar": tqdm_dict, "log": log_dict}
 
     def validation_step(self, batch, batch_idx):
-        # TODO randomize
         code_embs, query_embs = self.forward(batch)
-        loss, mrr, _, _ = self.get_eval_metrics(code_embs, query_embs)
+        return {"code_embs": code_embs, "query_embs": query_embs}
+
+    def validation_step_end(self, out):
+        # Validating on batch_size even in case of multi-gpus
+        loss, mrr, _, _ = self.get_eval_metrics(out["code_embs"], out["query_embs"])
         return {"loss": loss, "mrr": mrr}
 
     def validation_epoch_end(self, out):
