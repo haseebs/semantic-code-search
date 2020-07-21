@@ -39,7 +39,9 @@ class PretrainedModel(ModelBase):
         return torch.optim.Adam(self.parameters(), lr=self.hparams["learning_rate"])
 
     def on_after_backward(self):
-        from IPython import embed; embed()
+        for k, v in self.state_dict().items():
+            if 'query_encoder' in k:
+                self.state_dict()[k] *= self.hparams["query_grad_multiplier"]
 
     def init_encoders(self):
         # TODO cleanup this mess
