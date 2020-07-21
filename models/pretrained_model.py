@@ -36,10 +36,10 @@ class PretrainedModel(ModelBase):
         return code_embs, query_embs
 
     def configure_optimizers(self):
-        code_opt = torch.optim.Adam(self.code_encoder.parameters(), lr=self.hparams["learning_rate"])
-        query_opt = torch.optim.Adam(self.query_encoder.parameters(),
-                                     lr=self.hparams["learning_rate"] * self.hparams["query_lr_multiplier"])
-        return code_opt, query_opt
+        return torch.optim.Adam(self.parameters(), lr=self.hparams["learning_rate"])
+
+    def on_after_backward(self):
+        from IPython import embed; embed()
 
     def init_encoders(self):
         # TODO cleanup this mess
