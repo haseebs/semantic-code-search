@@ -10,7 +10,9 @@ class PretrainedRobertaEncoder(nn.Module):
     def __init__(self, embedding_dim: int):
         super().__init__()
         self.tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
-        self.model = RobertaForMaskedLM.from_pretrained("roberta-base", output_hidden_states=True)
+        self.model = RobertaForMaskedLM.from_pretrained(
+            "roberta-base", output_hidden_states=True
+        )
         self.linear = torch.nn.Linear(
             self.model.base_model.embeddings.word_embeddings.weight.shape[1], 128
         )

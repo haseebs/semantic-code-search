@@ -68,13 +68,15 @@ class CSNDataset(Dataset):
                     truncation=True,
                     max_length=self.hparams["query_max_num_tokens"],
                 )
-                enc_query = enc_query[:self.hparams["query_max_num_tokens"]-1]
+                enc_query = enc_query[: self.hparams["query_max_num_tokens"] - 1]
                 if enc_query[-1] != query_encoder.tokenizer.eos_token_id:
-                     enc_query.append(query_encoder.tokenizer.eos_token_id)
-                while len( enc_query) < self.hparams["query_max_num_tokens"]:
-                     enc_query.append(query_encoder.tokenizer.pad_token_id)
-                enc_query= np.array( enc_query)
-                enc_query_mask = np.int_(enc_query != query_encoder.tokenizer.pad_token_id)
+                    enc_query.append(query_encoder.tokenizer.eos_token_id)
+                while len(enc_query) < self.hparams["query_max_num_tokens"]:
+                    enc_query.append(query_encoder.tokenizer.pad_token_id)
+                enc_query = np.array(enc_query)
+                enc_query_mask = np.int_(
+                    enc_query != query_encoder.tokenizer.pad_token_id
+                )
 
             else:
                 enc_query, enc_query_mask = convert_and_pad_token_sequence(
