@@ -55,9 +55,6 @@ class ModelBase(pl.LightningModule):
 
         return {"loss": loss, "progress_bar": tqdm_dict, "log": log_dict}
 
-    def on_after_backward(self):
-        from IPython import embed; embed()
-
     def validation_step(self, batch, batch_idx):
         code_embs, query_embs = self.forward(batch)
         return {"code_embs": code_embs, "query_embs": query_embs}
