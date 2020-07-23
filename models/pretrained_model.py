@@ -42,7 +42,8 @@ class PretrainedModel(ModelBase):
 
     def on_after_backward(self):
         for param in self.query_encoder.parameters():
-            param.grad *= self.hparams["query_grad_multiplier"]
+            if param.grad is not None:
+                param.grad *= self.hparams["query_grad_multiplier"]
         #from IPython import embed; embed()
         #for k, v in self.state_dict().items():
         #    if 'query_encoder' in k:
