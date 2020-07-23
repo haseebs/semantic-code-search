@@ -101,14 +101,14 @@ def run():
         monitor="val_mrr",
         min_delta=0.00,
         patience=wandb.config["patience"],
-        verbose=False,
+        verbose=True,
         mode="max",
     )
 
     checkpoint_callback = ModelCheckpoint(
         filepath=wandb.run.dir + "/{epoch:02d}_best_checkpoint",
         monitor="val_mrr",
-        verbose=False,
+        verbose=True,
         mode="max",
     )
 
@@ -116,7 +116,7 @@ def run():
         print(f"Loading checkpoint from #{args.load} and evaluating")
 
     trainer = Trainer(
-        max_nb_epochs=wandb.config["max_epochs"],
+        max_epochs=wandb.config["max_epochs"],
         gradient_clip_val=wandb.config["gradient_clip"],
         early_stop_callback=early_stop_callback,
         checkpoint_callback=checkpoint_callback,

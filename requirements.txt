@@ -50,7 +50,7 @@ pyasn1-modules==0.2.8
 pycparser==2.20
 python-dateutil==2.8.1
 python-magic==0.4.18
-pytorch-lightning==0.7.6
+pytorch-lightning==0.8.5
 pytorch-metric-learning==0.9.85
 pytorch-transformers==1.2.0
 PyYAML==5.3.1
