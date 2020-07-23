@@ -23,6 +23,8 @@ class PretrainedModel(ModelBase):
         super(PretrainedModel, self).__init__(
             hparams, train_dataset, valid_dataset, test_dataset
         )
+        if self.hparams["freeze_pretrained_embeddings"]:
+            self.query_encoder.model.roberta.embeddings.requires_grad_(False)
 
     def forward(self, batch):
         code_embs = self.code_encoder(
