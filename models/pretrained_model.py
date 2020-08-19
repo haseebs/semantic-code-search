@@ -44,8 +44,8 @@ class PretrainedModel(ModelBase):
         for param in self.query_encoder.parameters():
             if param.grad is not None:
                 param.grad *= self.hparams["query_grad_multiplier"]
-        #from IPython import embed; embed()
-        #for k, v in self.state_dict().items():
+        # from IPython import embed; embed()
+        # for k, v in self.state_dict().items():
         #    if 'query_encoder' in k:
         #        self.state_dict()[k] *= self.hparams["query_grad_multiplier"]
 

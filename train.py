@@ -27,6 +27,8 @@ def run():
         "-l", "--load", action="store", type=str, help="path to checkpoint"
     )
     parser.add_argument(
+            "-r", "--runid", action="store", type=str, help="optional run id")
+    parser.add_argument(
         "-c",
         "--config",
         action="store",
@@ -45,9 +47,13 @@ def run():
     languages = [k.split("/")[-1] for k in cfg_file["data_dirs"]["value"]]
     cfg_file["languages"] = {"value": languages}
     print(f"Training on languages: {languages}")
+    
     run_id = None
-    if args.load:
+    if args.runid:
+        run_id = args.runid
+    elif args.load:
         run_id = args.load.split("/")[1].split("-")[2]
+
     logger = loggers.WandbLogger(
         experiment=wandb.init(
             project="semantic-code-search",
@@ -124,8 +130,8 @@ def run():
         logger=logger,
         deterministic=True,
         resume_from_checkpoint=args.load,
-        # train_percent_check=0.01,
-        # val_percent_check=0.01,
+        #train_percent_check=0.01,
+        #val_percent_check=0.06,
         gpus=3,
         distributed_backend="dp",
     )

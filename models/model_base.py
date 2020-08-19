@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from pytorch_metric_learning import losses
 
 from typing import Dict, Any, List
-from more_itertools import sliced
+from more_itertools import sliced, flatten
 from torch.utils.data import Dataset, DataLoader
 from torch.nn import functional as F
 
@@ -89,6 +89,26 @@ class ModelBase(pl.LightningModule):
 
             code_embs_batched = sliced(all_code_embs, 1000)
             query_embs_batched = sliced(all_query_embs, 1000)
+
+            if idx == 0:
+                n_extra_entries = all_code_embs.shape[0] % 1000
+                all_languages = list(
+                    sliced(
+                        list(flatten([x["batch"]["language"] for x in embeds]))[
+                            :-n_extra_entries
+                        ],
+                        1000,
+                    )
+                )
+                all_orig_idxes = list(
+                    sliced(
+                        torch.stack(
+                            [x["batch"]["original_data_idx"] for x in embeds]
+                        ).view(-1)[:-n_extra_entries],
+                        1000,
+                    )
+                )
+
             all_mrr, all_similarity_scores, all_ranks = [], [], []
             for code_embs, query_embs in tqdm(
                 zip(code_embs_batched, query_embs_batched)
@@ -103,7 +123,10 @@ class ModelBase(pl.LightningModule):
                 all_similarity_scores.append(similarity_scores)
                 all_ranks.append(ranks)
 
-            # self.make_examples(batch, similarity_scores, ranks)
+            if idx == 0:
+                self.make_examples(
+                    all_orig_idxes, all_languages, all_similarity_scores, all_ranks
+                )
 
             avg_mrr = torch.stack(all_mrr).mean()
             log_dict[f"test_mrr_{languages_used}"] = avg_mrr
@@ -141,7 +164,62 @@ class ModelBase(pl.LightningModule):
 
         return total_loss, mrr, similarity_scores, ranks
 
+    def make_examples(
+        self, all_orig_idxes, all_languages, all_similarity_scores, all_ranks
+    ):
+
+        examples_table = []
+        examples_table_columns = ["Rank", "Language", "Query", "Code"]
+
+        for original_idxes, languages, similarity_scores, ranks in zip(
+            all_orig_idxes, all_languages, all_similarity_scores, all_ranks
+        ):
+            max_examples = 1000
+            predictions = torch.argmax(similarity_scores, dim=1)
+            r = random.sample(range(1000), max_examples)
+
+            languages = np.array(languages)
+            selected_languages = languages[r]
+            selected_ranks = ranks[r]
+            selected_predictions = predictions[r]
+            predicted_original_idx = original_idxes[selected_predictions]
+            predicted_original_data = [
+                self.test_datasets[0].original_data[i]["code"]
+                for i in predicted_original_idx
+            ]
+
+            query_original_idx = original_idxes[r]
+            query_original_data = [
+                self.test_datasets[0].original_data[i]["docstring"]
+                for i in query_original_idx
+            ]
+
+            for idx in range(max_examples):
+                markdown_code = (
+                    "```%s\n" % selected_languages[idx]
+                    + predicted_original_data[idx].strip("\n")
+                    + "\n```"
+                )
+                examples_table.append(
+                    [
+                        selected_ranks[idx].item(),
+                        selected_languages[idx],
+                        query_original_data[idx],
+                        markdown_code,
+                    ]
+                )
+
+        self.logger.experiment.log(
+            {
+                "Test Examples": wandb.Table(
+                    columns=examples_table_columns, rows=examples_table
+                )
+            }
+        )
+
+    """
     def make_examples(self, batch, similarity_scores, ranks):
+        from IPython import embed; embed()
         # max_examples = 250 if 250 < self.hparams["batch_size"] else self.hparams["batch_size"]
         max_examples = 100
         language = self.test_dataset.original_data[0]["language"]
@@ -185,6 +263,7 @@ class ModelBase(pl.LightningModule):
                 )
             }
         )
+    """
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.parameters(), lr=self.hparams["learning_rate"])

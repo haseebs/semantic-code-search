@@ -15,7 +15,7 @@ query_encoder_type:
   value: "self_attention_encoder"
 encoder_sharing_mode:
   desc:
-  value: "per_input_source"
+  value: "all"
 code_max_num_tokens:
   desc:
   value: 200
