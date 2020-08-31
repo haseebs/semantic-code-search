@@ -5,7 +5,7 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 import pytorch_lightning as pl
-from pytorch_metric_learning import losses
+from pytorch_metric_learning import losses, miners
 
 from typing import Dict, Any, List
 from more_itertools import sliced, flatten
@@ -29,6 +29,12 @@ class ModelBase(pl.LightningModule):
         self.valid_dataset = valid_dataset
         self.test_datasets = test_datasets
         self.get_encoders()
+
+        self.miner = miners.MultiSimilarityMiner(epsilon=0.1)
+        self.loss_func = losses.TripletMarginLoss(
+            margin=self.hparams["margin"]
+        )  # , triplets_per_anchor="all"
+        # )
 
     def forward(self, batch):
         code_embs = self.code_encoder(
@@ -152,10 +158,9 @@ class ModelBase(pl.LightningModule):
         embs = torch.cat([query_embs, code_embs])
         labels = torch.arange(1, query_embs.shape[0] + 1)
         labels = torch.cat([labels, labels])
-        loss_func = losses.TripletMarginLoss(
-            margin=self.hparams["margin"], triplets_per_anchor="all"
-        )
-        total_loss = loss_func(embs, labels)
+
+        hard_pairs = self.miner(embs, labels)
+        total_loss = self.loss_func(embs, labels, hard_pairs)
 
         correct_scores = similarity_scores.diagonal().detach()
         compared_scores = similarity_scores >= correct_scores.unsqueeze(dim=-1)
@@ -169,7 +174,14 @@ class ModelBase(pl.LightningModule):
     ):
 
         examples_table = []
-        examples_table_columns = ["Rank", "Language", "Query", "Code"]
+        examples_table_columns = [
+            "Rank",
+            "Language",
+            "Query",
+            "Query Tokens",
+            "Code Predicted",
+            "Code Target",
+        ]
 
         for original_idxes, languages, similarity_scores, ranks in zip(
             all_orig_idxes, all_languages, all_similarity_scores, all_ranks
@@ -194,18 +206,39 @@ class ModelBase(pl.LightningModule):
                 for i in query_original_idx
             ]
 
+            qtoken_original_data = [
+                self.test_datasets[0].original_data[i][
+                    self.hparams["key_docstring_tokens"]
+                ][: self.hparams["query_max_num_tokens"]]
+                for i in query_original_idx
+            ]
+
+            target_original_data = [
+                self.test_datasets[0].original_data[i]["code"]
+                for i in query_original_idx
+            ]
+
             for idx in range(max_examples):
-                markdown_code = (
-                    "```%s\n" % selected_languages[idx]
+                markdown_code_predicted = (
+                    "```%s\n" % selected_languages[idx].item()
                     + predicted_original_data[idx].strip("\n")
                     + "\n```"
                 )
+
+                markdown_code_target = (
+                    "```%s\n" % selected_languages[idx].item()
+                    + target_original_data[idx].strip("\n")
+                    + "\n```"
+                )
+
                 examples_table.append(
                     [
                         selected_ranks[idx].item(),
-                        selected_languages[idx],
+                        selected_languages[idx].item(),
                         query_original_data[idx],
-                        markdown_code,
+                        qtoken_original_data[idx],
+                        markdown_code_predicted,
+                        markdown_code_target,
                     ]
                 )
 
