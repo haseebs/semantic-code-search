@@ -30,7 +30,10 @@ class ModelBase(pl.LightningModule):
         self.test_datasets = test_datasets
         self.get_encoders()
 
-        self.miner = miners.MultiSimilarityMiner(epsilon=0.1)
+        if self.hparams["miner_type"] == "multi_similarity_miner":
+            self.miner = miners.MultiSimilarityMiner(epsilon=0.1)
+        elif self.hparams["miner_type"] == "triplet_margin_miner":
+            self.miner = miners.TripletMarginMiner(margin=self.hparams["margin"], type_of_triplets="semihard")
         self.loss_func = losses.TripletMarginLoss(
             margin=self.hparams["margin"]
         )  # , triplets_per_anchor="all"
@@ -158,7 +161,6 @@ class ModelBase(pl.LightningModule):
         embs = torch.cat([query_embs, code_embs])
         labels = torch.arange(1, query_embs.shape[0] + 1)
         labels = torch.cat([labels, labels])
-
         hard_pairs = self.miner(embs, labels)
         total_loss = self.loss_func(embs, labels, hard_pairs)
 

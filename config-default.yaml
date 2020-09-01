@@ -92,3 +92,6 @@ tree_transformer_use_positional_embeddings:
 tree_transformer_use_level_positional_embeddings:
   desc: "Use level positional embeddings together with relative MHA"
   value: True
+miner_type:
+  desc: "Miner used in the loss function"
+  value: "triplet_margin_miner"
