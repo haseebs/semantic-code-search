@@ -66,7 +66,8 @@ key_docstring_tokens:
   value: "docstring_tokens"
 keep_keys:
   desc:
-  value: ["language", "docstring_tokens", "code_tokens", "code_ast_tokens", "code_ast_descendants"]
+  value: ["language", "docstring", "docstring_tokens", 
+          "code", "code_tokens", "code_ast_tokens", "code_ast_descendants"]
 keep_keys_test:
   desc:
   value: ["language", "docstring", "docstring_tokens", 
@@ -95,3 +96,6 @@ tree_transformer_use_level_positional_embeddings:
 miner_type:
   desc: "Miner used in the loss function"
   value: "triplet_margin_miner"
+use_elasticsearch:
+  desc:
+  value: True

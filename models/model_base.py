@@ -33,7 +33,9 @@ class ModelBase(pl.LightningModule):
         if self.hparams["miner_type"] == "multi_similarity_miner":
             self.miner = miners.MultiSimilarityMiner(epsilon=0.1)
         elif self.hparams["miner_type"] == "triplet_margin_miner":
-            self.miner = miners.TripletMarginMiner(margin=self.hparams["margin"], type_of_triplets="semihard")
+            self.miner = miners.TripletMarginMiner(
+                margin=self.hparams["margin"], type_of_triplets="semihard"
+            )
         self.loss_func = losses.TripletMarginLoss(
             margin=self.hparams["margin"]
         )  # , triplets_per_anchor="all"
@@ -53,6 +55,9 @@ class ModelBase(pl.LightningModule):
         return code_embs, query_embs
 
     def training_step(self, batch, batch_idx):
+        from IPython import embed
+
+        embed()
         code_embs, query_embs = self.forward(batch)
         return {"code_embs": code_embs, "query_embs": query_embs}
 
@@ -65,6 +70,9 @@ class ModelBase(pl.LightningModule):
         return {"loss": loss, "progress_bar": tqdm_dict, "log": log_dict}
 
     def validation_step(self, batch, batch_idx):
+        from IPython import embed
+
+        embed()
         code_embs, query_embs = self.forward(batch)
         return {"code_embs": code_embs, "query_embs": query_embs}
 

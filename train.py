@@ -70,6 +70,7 @@ def run():
         keep_keys=wandb.config["keep_keys"],
         data_split="train",
         languages=languages,
+        logger=logger,
     )
     valid_dataset = CSNDataset(
         hparams=wandb.config,
@@ -133,7 +134,7 @@ def run():
         resume_from_checkpoint=args.load,
         #train_percent_check=0.01,
         #val_percent_check=0.06,
-        gpus=3,
+        gpus=1,
         distributed_backend="dp",
     )
     # from IPython import embed; embed()
