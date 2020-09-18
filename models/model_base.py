@@ -55,9 +55,6 @@ class ModelBase(pl.LightningModule):
         return code_embs, query_embs
 
     def training_step(self, batch, batch_idx):
-        from IPython import embed
-
-        embed()
         code_embs, query_embs = self.forward(batch)
         return {"code_embs": code_embs, "query_embs": query_embs}
 
@@ -70,9 +67,6 @@ class ModelBase(pl.LightningModule):
         return {"loss": loss, "progress_bar": tqdm_dict, "log": log_dict}
 
     def validation_step(self, batch, batch_idx):
-        from IPython import embed
-
-        embed()
         code_embs, query_embs = self.forward(batch)
         return {"code_embs": code_embs, "query_embs": query_embs}
 

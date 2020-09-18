@@ -132,8 +132,8 @@ def run():
         logger=logger,
         deterministic=True,
         resume_from_checkpoint=args.load,
-        #train_percent_check=0.01,
-        #val_percent_check=0.06,
+        # train_percent_check=0.01,
+        # val_percent_check=0.06,
         gpus=1,
         distributed_backend="dp",
     )

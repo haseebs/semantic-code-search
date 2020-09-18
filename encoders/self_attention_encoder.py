@@ -37,7 +37,7 @@ class SelfAttentionEncoder(EncoderBase):
         initrange = 0.1
         self.encoder.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src, seq_tokens_mask, seq_len):
+    def forward(self, seq_tokens, seq_tokens_mask, seq_len):
         # if self.src_mask is None or self.src_mask.size(0) != len(src):
         #    device = src.device
         #    mask = self._generate_square_subsequent_mask(len(src)).to(device)
@@ -46,8 +46,8 @@ class SelfAttentionEncoder(EncoderBase):
         # seq_tokens_mask = (1 - seq_tokens_mask).T > 0
         seq_tokens_mask = seq_tokens_mask == 0
 
-        src = src.T
-        src_embed = self.encoder(src) * math.sqrt(self.ninp)
+        seq_tokens = seq_tokens.T
+        src_embed = self.encoder(seq_tokens) * math.sqrt(self.ninp)
         src_embed = self.pos_encoder(src_embed)
         src_embed = self.dropout(src_embed)
 

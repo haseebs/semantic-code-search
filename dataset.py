@@ -22,7 +22,7 @@ class CSNDataset(Dataset):
         keep_keys: set(),
         data_split: str = "train",
         languages: List[str] = [],
-        logger = None,
+        logger=None,
     ):
         self.hparams = hparams
         self.keep_keys = keep_keys
@@ -37,6 +37,23 @@ class CSNDataset(Dataset):
         return len(self.encoded_data)
 
     def __getitem__(self, idx):
+        if self.data_split == "train" and self.hparams["use_elasticsearch"]:
+            selected_neg = None
+            if random.random() > 0.5 or self.encoded_data[idx]["neg_indices"] == []:
+                selected_neg = self.encoded_data[
+                    random.randrange(len(self.encoded_data))
+                ]
+            else:
+                selected_neg = self.encoded_data[
+                    random.choice(self.encoded_data[idx]["neg_indices"])
+                ]
+            self.encoded_data[idx]["encoded_code_neg"] = selected_neg["encoded_code"]
+            self.encoded_data[idx]["encoded_code_mask_neg"] = selected_neg[
+                "encoded_code_mask"
+            ]
+            self.encoded_data[idx]["encoded_code_length_neg"] = selected_neg[
+                "encoded_code_length"
+            ]
         return self.encoded_data[idx]
 
     def read_jsonl(self, path: str) -> Iterable[Dict[str, Any]]:
@@ -64,10 +81,13 @@ class CSNDataset(Dataset):
             return
         print("Building Elasticsearch Index...")
         self.es = Elasticsearch()
+        self.es.indices.delete(index="code_index", ignore=[400, 404])
         for idx, data in tqdm(
             enumerate(self.original_data), total=len(self.original_data)
         ):
-            self.es.index(index="code_index", body={"idx": idx, "code": data["code"]})
+            self.es.index(
+                index="code_index", id=idx, body={"idx": idx, "code": data["code"]}
+            )
 
     def encode_data(self, query_encoder: nn.Module, code_encoder: nn.Module) -> None:
         # TODO may need to move to encoder class to handle encoders that come with their own tokenizers
@@ -175,53 +195,19 @@ class CSNDataset(Dataset):
                     },
                 )
                 code_tokens_neg = None
-                for hit in res["hits"]["hits"]:
-                    if hit["_source"]["idx"] != idx:
-                        code_tokens_neg = self.original_data[hit["_source"]["idx"]][
-                            "code_tokens"
-                        ]
-                        break
-                if code_tokens_neg != None:
-                    neg_sample = self.original_data[hit["_source"]["idx"]]
-                    markdown_code_pos = (
-                        "```%s\n" % sample["language"]
-                        + sample["code"].strip("\n")
-                        + "\n```"
-                    )
-
-                    markdown_code_neg = (
-                        "```%s\n" % neg_sample["language"]
-                        + neg_sample["code"].strip("\n")
-                        + "\n```"
-                    )
-                    examples_table.append(
-                        [
-                            sample["language"],
-                            sample["docstring"],
-                            markdown_code_pos,
-                            markdown_code_neg,
-                            neg_sample["docstring"],
-                            hit["_score"],
-                        ]
-                    )
-                if code_tokens_neg == None:
+                neg_idxes = [
+                    int(hit["_id"])
+                    for hit in res["hits"]["hits"][:10]
+                    if int(hit["_id"]) != idx
+                ]
+                if len(neg_idxes) == 0:
                     count_empty_neg += 1
-                    code_tokens_neg = self.original_data[
-                        random.sample(range(0, len(self.original_data)), 1)[0]
-                    ]["code_tokens"]
-
-                enc_code_neg, enc_code_mask_neg = convert_and_pad_token_sequence(
-                    code_encoder.vocabulary,
-                    code_tokens_neg,
-                    self.hparams["code_max_num_tokens"],
-                )
-
-                enc_code_length_neg = int(np.sum(enc_code_mask_neg))
                 encoded_data_item.update(
                     {
-                        "encoded_code_neg": enc_code_neg,
-                        "encoded_code_mask_neg": enc_code_mask_neg,
-                        "encoded_code_length_neg": enc_code_length_neg,
+                        "neg_indices": neg_idxes,
+                        "encoded_code_neg": [],
+                        "encoded_code_mask_neg": [],
+                        "encoded_code_length_neg": 0,
                     }
                 )
 
@@ -234,18 +220,6 @@ class CSNDataset(Dataset):
             "; empty negatives:",
             count_empty_neg,
         )
-
-        from IPython import embed
-
-        embed()
-        if self.hparams["use_elasticsearch"]:
-            self.logger.experiment.log(
-                {
-                    "Elasticsearch Examples": wandb.Table(
-                        columns=examples_columns, rows=examples_table
-                    )
-                }
-            )
 
         if self.data_split in ["valid", "test"]:
             random.shuffle(self.encoded_data)
