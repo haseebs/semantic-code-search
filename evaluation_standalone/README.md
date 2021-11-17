@@ -43,3 +43,5 @@ search.apply(SAMPLE_PATH, writer)
 ```
 
 See [BOW Encoder](https://gitlab.cs.hs-rm.de/lavis/repository_mining/codesearchnet-challenge/code-search-net-challenge/blob/master/src/encoder/one_hot/bow_encoder.py) as an additional example
+
+Note: Not all the code within this directory belongs to me. I don't remember where it came from but if you are the author, let me know and I will add a reference.
