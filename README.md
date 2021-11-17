@@ -1,6 +1,6 @@
 # Semantic Code Search
 
-This repo contains the pytorch implementation of some of the experiments in ["CodeSearchNet Challenge: Evaluating the State of Semantic Code Search"](https://arxiv.org/abs/1909.09436). The original tensorflow implementation can be found [here](https://github.com/github/CodeSearchNet).
+This repo contains the unofficial pytorch implementation of some of the experiments in ["CodeSearchNet Challenge: Evaluating the State of Semantic Code Search"](https://arxiv.org/abs/1909.09436). The original tensorflow implementation can be found [here](https://github.com/github/CodeSearchNet).
 
 ## A few instructions
 
